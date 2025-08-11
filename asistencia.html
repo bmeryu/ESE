@@ -1288,17 +1288,14 @@
                 return;
             }
 
-            // This function will be called on successful scan
             const onScanSuccess = (decodedText, decodedResult) => {
                 console.log(`QR escaneado: ${decodedText}`);
                 let rutToProcess = decodedText.trim();
 
-                // Check if the scanned text is a URL from the Chilean Civil Registry
                 if (decodedText.includes("registrocivil.cl")) {
                     try {
                         const url = new URL(decodedText);
                         const params = new URLSearchParams(url.search);
-                        // The 'a' parameter in the ID card URL contains the RUN/RUT.
                         const run = params.get('a'); 
                         if (run) {
                             rutToProcess = run;
@@ -1306,54 +1303,69 @@
                         } else {
                              console.warn("URL del Registro Civil escaneada, pero no se encontró el parámetro 'a' (RUN).");
                              showModal('QR No Válido', 'El QR del carnet no contiene un RUN válido.');
-                             return; // Do not process if the RUN is not found
+                             return;
                         }
                     } catch (error) {
                         console.error("No se pudo procesar la URL del QR:", error);
                         showModal('Error de QR', 'El QR parece ser de un carnet, pero no se pudo leer correctamente.');
-                        return; // Do not process if there's an error
+                        return;
                     }
                 }
                 
-                // Mark attendance with the processed RUT
                 markAttendanceByRut(rutToProcess);
+                // Stop scanning after a successful scan
+                stopQrCodeScanner();
             };
 
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5QrcodeScanner(
-                    "qr-reader",
-                    { 
-                        fps: 10, 
-                        qrbox: { width: 250, height: 250 },
-                        disableFlip: false 
-                    },
-                    /* verbose= */ false // Set to false to avoid excessive logging
-                );
-            }
+            const onScanFailure = (error) => {
+                // console.warn(`Code scan error = ${error}`);
+            };
             
-            html5QrcodeScanner.render(onScanSuccess, (errorMessage) => { /* onScanError */ });
+            // Using the robust Html5Qrcode class directly
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            }
+
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             startQrScannerButton.classList.add('hidden');
             stopQrScannerButton.classList.remove('hidden');
+
+            try {
+                // Request camera permission and start scanning
+                await html5QrcodeScanner.start(
+                    { facingMode: "environment" }, // Prefer the rear camera
+                    config,
+                    onScanSuccess,
+                    onScanFailure
+                );
+            } catch (err) {
+                console.error("Fallo al iniciar con la cámara trasera, intentando con otras cámaras.", err);
+                try {
+                    // Fallback to any available camera if the rear one fails
+                    await html5QrcodeScanner.start(
+                        undefined, // Let the library decide the camera
+                        config,
+                        onScanSuccess,
+                        onScanFailure
+                    );
+                } catch (err2) {
+                    showModal('Error de Cámara', `No se pudo iniciar la cámara. Asegúrate de haber dado los permisos necesarios. Error: ${err2}`);
+                    startQrScannerButton.classList.remove('hidden');
+                    stopQrScannerButton.classList.add('hidden');
+                }
+            }
         }
 
         function stopQrCodeScanner() {
             if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-                console.log("Deteniendo escáner QR...");
                 html5QrcodeScanner.stop().then(() => {
                     console.log("Escáner QR detenido.");
-                    qrReader.innerHTML = ''; // Limpiar el feed de la cámara
-                    qrReader.style.display = 'block'; 
+                    qrReader.innerHTML = '';
                     startQrScannerButton.classList.remove('hidden');
                     stopQrScannerButton.classList.add('hidden');
                 }).catch((err) => {
                     console.error("Error al detener el escáner QR:", err);
-                    showModal('Error', 'Error al detener el escáner QR. Por favor, revisa la consola para más detalles.');
                 });
-            } else {
-                console.log("Escáner QR no está activo para detener.");
-                qrReader.innerHTML = ''; 
-                startQrScannerButton.classList.remove('hidden');
-                stopQrScannerButton.classList.add('hidden');
             }
         }
 
