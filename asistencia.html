@@ -10,8 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS for Excel file handling -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-    <!-- html5-qrcode library for QR scanning -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- ZXing library for PDF417 and other barcode scanning -->
+    <script src="https://unpkg.com/@zxing/library@latest" type="text/javascript"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -299,7 +299,9 @@
                         <!-- QR Scanner Section -->
                         <div class="bg-gray-50 p-6 rounded-xl shadow-inner mb-6">
                             <h3 class="text-xl font-semibold mb-4 text-gray-800">Escáner de Asistencia QR</h3>
-                            <div id="qr-reader" style="width: 100%; min-height: 200px;" class="mb-4 bg-gray-200 rounded-md overflow-hidden"></div>
+                            <div class="mb-4 bg-gray-200 rounded-md overflow-hidden">
+                                <video id="video" style="width: 100%; border-radius: 0.375rem;"></video>
+                            </div>
                             <div class="flex space-x-2 justify-center">
                                 <button id="start-qr-scanner-button" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
                                     <i class="fa-solid fa-qrcode mr-2"></i>Iniciar Escáner QR
@@ -542,7 +544,8 @@
         let parsedExcelData = []; // To store the parsed data from the Excel file
         let allEnrollees = []; // To store all enrollees for the selected event
         let allEvents = []; // To store all events for filtering
-        let html5QrcodeScanner = null; // Global instance for QR scanner, initialized to null
+        let codeReader = null; // ZXing code reader instance
+        let isScanning = false; // Flag to prevent multiple scans
 
         // Show a custom modal message
         function showModal(title, message) {
@@ -584,7 +587,7 @@
             pageTitle.textContent = title;
 
             // Stop QR scanner if navigating away from attendance view
-            if (viewId !== 'view-mark-attendance' && html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+            if (viewId !== 'view-mark-attendance' && isScanning) {
                 stopQrCodeScanner();
             }
         }
@@ -1083,7 +1086,7 @@
             }
             searchInputAttendance.value = '';
             // Stop scanner if event changes
-            if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+            if (isScanning) {
                 stopQrCodeScanner();
             }
         });
@@ -1288,84 +1291,62 @@
                 return;
             }
 
-            const onScanSuccess = (decodedText, decodedResult) => {
-                console.log(`QR escaneado: ${decodedText}`);
-                let rutToProcess = decodedText.trim();
-
-                if (decodedText.includes("registrocivil.cl")) {
-                    try {
-                        const url = new URL(decodedText);
-                        const params = new URLSearchParams(url.search);
-                        const run = params.get('a'); 
-                        if (run) {
-                            rutToProcess = run;
-                            console.log(`RUT extraído de la URL: ${rutToProcess}`);
-                        } else {
-                             console.warn("URL del Registro Civil escaneada, pero no se encontró el parámetro 'a' (RUN).");
-                             showModal('QR No Válido', 'El QR del carnet no contiene un RUN válido.');
-                             return;
-                        }
-                    } catch (error) {
-                        console.error("No se pudo procesar la URL del QR:", error);
-                        showModal('Error de QR', 'El QR parece ser de un carnet, pero no se pudo leer correctamente.');
-                        return;
-                    }
-                }
-                
-                markAttendanceByRut(rutToProcess);
-                // Stop scanning after a successful scan
-                stopQrCodeScanner();
-            };
-
-            const onScanFailure = (error) => {
-                // console.warn(`Code scan error = ${error}`);
-            };
+            codeReader = new ZXing.BrowserPDF417Reader();
             
-            // Using the robust Html5Qrcode class directly
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5Qrcode("qr-reader");
-            }
-
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            startQrScannerButton.classList.add('hidden');
-            stopQrScannerButton.classList.remove('hidden');
-
             try {
-                // Request camera permission and start scanning
-                await html5QrcodeScanner.start(
-                    { facingMode: "environment" }, // Prefer the rear camera
-                    config,
-                    onScanSuccess,
-                    onScanFailure
-                );
-            } catch (err) {
-                console.error("Fallo al iniciar con la cámara trasera, intentando con otras cámaras.", err);
-                try {
-                    // Fallback to any available camera if the rear one fails
-                    await html5QrcodeScanner.start(
-                        undefined, // Let the library decide the camera
-                        config,
-                        onScanSuccess,
-                        onScanFailure
-                    );
-                } catch (err2) {
-                    showModal('Error de Cámara', `No se pudo iniciar la cámara. Asegúrate de haber dado los permisos necesarios. Error: ${err2}`);
-                    startQrScannerButton.classList.remove('hidden');
-                    stopQrScannerButton.classList.add('hidden');
+                const videoInputDevices = await codeReader.getVideoInputDevices();
+                let selectedDeviceId = videoInputDevices[0].deviceId;
+                const rearCamera = videoInputDevices.find(device => /back|rear|environment/i.test(device.label));
+                if (rearCamera) {
+                    selectedDeviceId = rearCamera.deviceId;
                 }
+
+                startQrScannerButton.classList.add('hidden');
+                stopQrScannerButton.classList.remove('hidden');
+                isScanning = true;
+
+                codeReader.decodeFromVideoDevice(selectedDeviceId, 'video', (result, err) => {
+                    if (result) {
+                        if(isScanning) {
+                            isScanning = false; 
+                            console.log("Leído:", result.text);
+                            
+                            let rutToProcess = result.text.trim();
+                            if (rutToProcess.includes("registrocivil.cl")) {
+                                try {
+                                    const url = new URL(rutToProcess);
+                                    const params = new URLSearchParams(url.search);
+                                    const run = params.get('a');
+                                    if (run) {
+                                        rutToProcess = run;
+                                    }
+                                } catch (error) {
+                                    console.error("Error parsing URL", error);
+                                }
+                            }
+                            markAttendanceByRut(rutToProcess);
+                            stopQrCodeScanner();
+                        }
+                    }
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error(err);
+                    }
+                });
+            } catch (err) {
+                console.error("Error al iniciar la cámara con ZXing:", err);
+                showModal('Error de Cámara', `No se pudo iniciar la cámara. Asegúrate de haber dado los permisos. Error: ${err}`);
+                startQrScannerButton.classList.remove('hidden');
+                stopQrScannerButton.classList.add('hidden');
             }
         }
 
         function stopQrCodeScanner() {
-            if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-                html5QrcodeScanner.stop().then(() => {
-                    console.log("Escáner QR detenido.");
-                    qrReader.innerHTML = '';
-                    startQrScannerButton.classList.remove('hidden');
-                    stopQrScannerButton.classList.add('hidden');
-                }).catch((err) => {
-                    console.error("Error al detener el escáner QR:", err);
-                });
+            if (codeReader) {
+                codeReader.reset();
+                isScanning = false;
+                console.log("Escáner detenido.");
+                startQrScannerButton.classList.remove('hidden');
+                stopQrScannerButton.classList.add('hidden');
             }
         }
 
