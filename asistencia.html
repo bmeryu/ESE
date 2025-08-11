@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Asistencia ESE</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel file handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <!-- html5-qrcode library for QR scanning -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Removed .container max-width as it's now handled by flex and specific login styles */
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .sidebar {
+            width: 250px;
+            transition: width 0.3s ease-in-out;
+            transform: translateX(0);
+        }
+        .sidebar.collapsed {
+            width: 64px;
+        }
+        .sidebar.collapsed .menu-text {
+            display: none;
+        }
+        .sidebar.collapsed #app-title {
+            opacity: 0;
+            width: 0;
+        }
+        .content-area {
+            transition: margin-left 0.3s ease-in-out;
+        }
+        .main-content {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .styled-table {
+            border-collapse: collapse;
+            font-size: 0.9em;
+            width: 100%;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+        .styled-table thead tr {
+            background-color: #3b82f6;
+            color: #ffffff;
+            text-align: left;
+        }
+        .styled-table th,
+        .styled-table td {
+            padding: 12px 15px;
+        }
+        .styled-table tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+        .styled-table tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+        .styled-table tbody tr:last-of-type {
+            border-bottom: 2px solid #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <!-- Loading screen -->
+    <div id="loading-screen" class="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-lg text-center transition-opacity duration-500">
+        <div class="loading-spinner"></div>
+        <p class="mt-4 text-gray-600">Cargando...</p>
+    </div>
+
+    <!-- Login screen - Updated design -->
+    <div id="login-screen" class="flex items-center justify-center min-h-screen w-full p-6 hidden">
+        <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+            <h1 class="text-4xl font-bold text-center mb-6 text-gray-800">Iniciar Sesión</h1>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="login-email" class="block text-sm font-medium text-gray-700">Correo Electrónico:</label>
+                    <input type="email" id="login-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña:</label>
+                    <input type="password" id="login-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                </div>
+                <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                    Iniciar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="main-app" class="w-full h-screen flex hidden">
+        
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar bg-gray-800 text-white flex flex-col p-4">
+            <div class="flex items-center justify-between mb-8">
+                <h2 id="app-title" class="text-2xl font-bold transition-all duration-300">ESE App</h2>
+                <button id="sidebar-toggle" class="p-2 rounded-md hover:bg-gray-700">
+                    <i class="fa-solid fa-bars text-white"></i>
+                </button>
+            </div>
+            
+            <nav id="menu-admin" class="space-y-2 hidden">
+                <a href="#" id="menu-user-management" class="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-700 transition-colors duration-200">
+                    <i class="fa-solid fa-users text-xl"></i>
+                    <span class="menu-text">Gestión de Usuarios</span>
+                </a>
+            </nav>
+            
+            <nav id="menu-user" class="space-y-2 hidden flex-grow">
+                <a href="#" id="menu-events" class="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-700 transition-colors duration-200">
+                    <i class="fa-solid fa-calendar text-xl"></i>
+                    <span class="menu-text">Eventos</span>
+                    <span id="event-counter" class="ml-auto bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">0</span>
+                </a>
+                <a href="#" id="menu-upload-enrollees" class="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-700 transition-colors duration-200">
+                    <i class="fa-solid fa-upload text-xl"></i>
+                    <span class="menu-text">Cargar Inscritos</span>
+                </a>
+                <a href="#" id="menu-mark-attendance" class="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-700 transition-colors duration-200">
+                    <i class="fa-solid fa-clipboard-check text-xl"></i>
+                    <span class="menu-text">Tomar Asistencia</span>
+                </a>
+            </nav>
+
+            <div class="mt-auto">
+                <button id="logout-button" class="flex items-center space-x-2 p-2 w-full rounded-md hover:bg-red-700 transition-colors duration-200">
+                    <i class="fa-solid fa-right-from-bracket text-xl"></i>
+                    <span class="menu-text">Cerrar Sesión</span>
+                </button>
+                <div class="mt-4 text-xs text-gray-400 text-center">
+                    <p class="truncate"><span class="menu-text">ID de Usuario:</span> <span id="user-id-display"></span></p>
+                    <p class="truncate"><span class="menu-text">Rol:</span> <span id="user-role-display"></span></p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 p-8 overflow-y-auto">
+            <header class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h1 id="page-title" class="text-4xl font-bold text-gray-800">Bienvenido al Sistema de Asistencia</h1>
+            </header>
+
+            <div id="content-container" class="space-y-8">
+                <!-- User Management View (Admin Only) -->
+                <div id="view-user-management" class="bg-white p-8 rounded-xl shadow-lg hidden">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Gestión de Usuarios</h2>
+                    <form id="create-user-form" class="space-y-4">
+                        <div>
+                            <label for="new-user-email" class="block text-sm font-medium text-gray-700">Correo Electrónico:</label>
+                            <input type="email" id="new-user-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label for="new-user-password" class="block text-sm font-medium text-gray-700">Contraseña:</label>
+                            <input type="password" id="new-user-password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                        </div>
+                        <button type="submit" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                            Crear Usuario
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Events View (User Only) -->
+                <div id="view-events" class="bg-white p-8 rounded-xl shadow-lg hidden">
+                    <h2 class="text-2xl font-semibold mb-6 text-gray-800">Crear y Gestionar Eventos</h2>
+                    <form id="event-form" class="space-y-4 mb-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
+                        <input type="hidden" id="event-id">
+                        <div>
+                            <label for="event-name" class="block text-sm font-medium text-gray-700">Nombre del Evento:</label>
+                            <input type="text" id="event-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                        </div>
+                        <div>
+                            <label for="event-date" class="block text-sm font-medium text-gray-700">Fecha del Evento:</label>
+                            <input type="date" id="event-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button type="submit" id="save-event-button" class="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                                Crear Evento
+                            </button>
+                            <button type="button" id="cancel-edit-button" class="flex-1 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 hidden">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Mis Eventos</h3>
+
+                    <!-- New search and filter inputs for events -->
+                    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                        <div class="flex-1">
+                            <label for="event-search-input" class="sr-only">Buscar evento por nombre</label>
+                            <input type="text" id="event-search-input" placeholder="Buscar evento por nombre..." class="mt-1 block w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div class="flex-1">
+                            <label for="event-filter-date" class="sr-only">Filtrar por fecha</label>
+                            <input type="date" id="event-filter-date" class="mt-1 block w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div id="events-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Event cards will be injected here -->
+                    </div>
+                </div>
+                
+                <!-- Upload Enrollees View (User Only) -->
+                <div id="view-upload-enrollees" class="bg-white p-8 rounded-xl shadow-lg hidden">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Cargar Lista de Inscritos</h2>
+                    <p class="text-gray-600 mb-4">
+                        Selecciona un evento y carga un archivo de Excel para los inscritos. 
+                        Asegúrate de que el archivo tenga las columnas: <strong>Rut, Id, Nombre, Apellido Paterno, Apellido Materno, Email.</strong>
+                    </p>
+                    <div class="mb-4">
+                        <label for="event-select-upload" class="block text-sm font-medium text-gray-700">Seleccionar Evento:</label>
+                        <select id="event-select-upload" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="">Selecciona un evento...</option>
+                        </select>
+                    </div>
+                    <form id="upload-form" class="space-y-4">
+                        <div>
+                            <label for="excel-file" class="block text-sm font-medium text-gray-700">Archivo de Inscritos (Excel):</label>
+                            <input type="file" id="excel-file" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" accept=".xlsx, .xls" required>
+                        </div>
+                        <button type="submit" id="process-file-button" class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200">
+                            Cargar y Visualizar
+                        </button>
+                    </form>
+                    
+                    <div id="enrollees-display" class="mt-8 hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-semibold text-gray-800">Inscritos del Evento</h3>
+                            <button id="save-enrollees-button" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                                Guardar Inscritos
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rut</th>
+                                        <th>Nombre</th>
+                                        <th>Apellido Paterno</th>
+                                        <th>Apellido Materno</th>
+                                        <th>Email</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="enrollees-table-body">
+                                    <!-- Enrollee data will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mark Attendance View (User Only) -->
+                <div id="view-mark-attendance" class="bg-white p-8 rounded-xl shadow-lg hidden">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Tomar Asistencia</h2>
+                    <div class="mb-4">
+                        <label for="event-select-attendance" class="block text-sm font-medium text-gray-700">Seleccionar Evento:</label>
+                        <select id="event-select-attendance" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option value="">Selecciona un evento...</option>
+                        </select>
+                    </div>
+
+                    <div id="attendance-section" class="mt-8 hidden">
+                        <!-- New counter cards section -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-gray-100 p-4 rounded-xl shadow-sm text-center border border-gray-200">
+                                <h4 class="text-md font-medium text-gray-600">Total Inscritos</h4>
+                                <p id="total-enrollees-count" class="text-3xl font-bold text-gray-800 mt-2">0</p>
+                            </div>
+                            <div class="bg-green-100 p-4 rounded-xl shadow-sm text-center border border-green-200">
+                                <h4 class="text-md font-medium text-green-700">Presentes</h4>
+                                <p id="attended-count" class="text-3xl font-bold text-green-800 mt-2">0</p>
+                            </div>
+                            <div class="bg-red-100 p-4 rounded-xl shadow-sm text-center border border-red-200">
+                                <h4 class="text-md font-medium text-red-700">Ausentes</h4>
+                                <p id="not-attended-count" class="text-3xl font-bold text-red-800 mt-2">0</p>
+                            </div>
+                        </div>
+
+                        <!-- QR Scanner Section -->
+                        <div class="bg-gray-50 p-6 rounded-xl shadow-inner mb-6">
+                            <h3 class="text-xl font-semibold mb-4 text-gray-800">Escáner de Asistencia QR</h3>
+                            <div id="qr-reader" style="width: 100%; min-height: 200px;" class="mb-4 bg-gray-200 rounded-md overflow-hidden"></div>
+                            <div class="flex space-x-2 justify-center">
+                                <button id="start-qr-scanner-button" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                                    <i class="fa-solid fa-qrcode mr-2"></i>Iniciar Escáner QR
+                                </button>
+                                <button id="stop-qr-scanner-button" class="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 hidden">
+                                    <i class="fa-solid fa-stop-circle mr-2"></i>Detener Escáner QR
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Search input - Made more noticeable -->
+                        <div class="mb-4">
+                            <label for="search-input-attendance" class="sr-only">Buscar inscrito</label>
+                            <input type="text" id="search-input-attendance" placeholder="Buscar por Rut o nombre completo..." class="mt-1 block w-full p-3 text-lg rounded-md border-2 border-blue-400 shadow-md focus:border-blue-600 focus:ring-blue-600 bg-blue-50 placeholder-gray-500">
+                        </div>
+
+                        <!-- Export buttons section -->
+                        <div class="flex justify-end space-x-2 mb-4">
+                            <button id="add-enrollee-button" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200" disabled>
+                                <i class="fa-solid fa-user-plus mr-2"></i>Agregar Nuevo Inscrito
+                            </button>
+                            <button id="export-attended-button" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200" disabled>
+                                <i class="fa-solid fa-file-excel mr-2"></i>Exportar Presentes
+                            </button>
+                            <button id="export-not-attended-button" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200" disabled>
+                                <i class="fa-solid fa-file-excel mr-2"></i>Exportar Ausentes
+                            </button>
+                        </div>
+                        
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-semibold text-gray-800">Lista de Asistencia</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="styled-table">
+                                <thead>
+                                    <tr>
+                                        <th>Rut</th>
+                                        <th>Nombre Completo</th>
+                                        <th>Email</th>
+                                        <th>Asistencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-table-body">
+                                    <!-- Attendance data will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Custom Modal for Messages -->
+    <div id="message-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+            <h3 id="modal-title" class="text-xl font-semibold mb-4"></h3>
+            <p id="modal-message" class="text-gray-600 mb-6"></p>
+            <button id="modal-close-button" class="w-full py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">Cerrar</button>
+        </div>
+    </div>
+    
+    <!-- Modal for Confirmations (e.g., delete) -->
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+            <h3 class="text-xl font-semibold mb-4">Confirmar</h3>
+            <p id="confirm-message" class="text-gray-600 mb-6">¿Estás seguro de que quieres realizar esta acción?</p>
+            <div class="flex justify-end space-x-4">
+                <button id="confirm-cancel-button" class="py-2 px-4 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none">Cancelar</button>
+                <button id="confirm-ok-button" class="py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Enrollee Modal -->
+    <div id="add-enrollee-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-96">
+            <h3 class="text-xl font-semibold mb-4">Agregar Nuevo Inscrito</h3>
+            <form id="add-enrollee-form" class="space-y-4">
+                <div>
+                    <label for="new-enrollee-rut" class="block text-sm font-medium text-gray-700">Rut:</label>
+                    <input type="text" id="new-enrollee-rut" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                </div>
+                <!-- Removed Id field from the input form -->
+                <div>
+                    <label for="new-enrollee-nombre" class="block text-sm font-medium text-gray-700">Nombre:</label>
+                    <input type="text" id="new-enrollee-nombre" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label for="new-enrollee-apellido-paterno" class="block text-sm font-medium text-gray-700">Apellido Paterno:</label>
+                    <input type="text" id="new-enrollee-apellido-paterno" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="new-enrollee-apellido-materno" class="block text-sm font-medium text-gray-700">Apellido Materno:</label>
+                    <input type="text" id="new-enrollee-apellido-materno" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="new-enrollee-email" class="block text-sm font-medium text-gray-700">Email:</label>
+                    <input type="email" id="new-enrollee-email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-add-enrollee" class="py-2 px-4 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 focus:outline-none">Cancelar</button>
+                    <button type="submit" class="py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none">Agregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithEmailAndPassword,
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc,
+            addDoc,
+            onSnapshot,
+            collection,
+            query,
+            deleteDoc,
+            getDocs,
+            writeBatch
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by the canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyA1PhJqJb8nrncHSTMcEfgkVor8Oswnark",
+            authDomain: "sistema-de-asistencia-ese.firebaseapp.com",
+            projectId: "sistema-de-asistencia-ese",
+            storageBucket: "sistema-de-asistencia-ese.firebasestorage.app",
+            messagingSenderId: "780601570468",
+            appId: "1:780601570468:web:d14a1c63c7a2407c5b6231",
+            measurementId: "G-QHRCXQEPMF"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? initialAuthToken : null;
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // UI elements
+        const loadingScreen = document.getElementById('loading-screen');
+        const loginScreen = document.getElementById('login-screen');
+        const loginForm = document.getElementById('login-form');
+        const loginEmailInput = document.getElementById('login-email');
+        const loginPasswordInput = document.getElementById('login-password');
+        
+        const mainApp = document.getElementById('main-app');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const appTitle = document.getElementById('app-title');
+        const menuAdmin = document.getElementById('menu-admin');
+        const menuUser = document.getElementById('menu-user');
+        const logoutButton = document.getElementById('logout-button');
+        const userIdDisplay = document.getElementById('user-id-display');
+        const userRoleDisplay = document.getElementById('user-role-display');
+        const eventCounter = document.getElementById('event-counter');
+
+        const pageTitle = document.getElementById('page-title');
+        const viewUserManagement = document.getElementById('view-user-management');
+        const viewEvents = document.getElementById('view-events');
+        const viewUploadEnrollees = document.getElementById('view-upload-enrollees');
+        const viewMarkAttendance = document.getElementById('view-mark-attendance');
+        
+        const createUserForm = document.getElementById('create-user-form');
+        const newUserEmailInput = document.getElementById('new-user-email');
+        const newUserPasswordInput = document.getElementById('new-user-password');
+        
+        const messageModal = document.getElementById('message-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseButton = document.getElementById('modal-close-button');
+
+        const confirmModal = document.getElementById('confirm-modal');
+        const confirmMessage = document.getElementById('confirm-message');
+        const confirmOkButton = document.getElementById('confirm-ok-button');
+        const confirmCancelButton = document.getElementById('confirm-cancel-button');
+
+        // Event management elements
+        const eventForm = document.getElementById('event-form');
+        const eventIdInput = document.getElementById('event-id');
+        const eventNameInput = document.getElementById('event-name');
+        const eventDateInput = document.getElementById('event-date');
+        const saveEventButton = document.getElementById('save-event-button');
+        const cancelEditButton = document.getElementById('cancel-edit-button');
+        const eventsList = document.getElementById('events-list');
+        const eventSearchInput = document.getElementById('event-search-input'); // New
+        const eventFilterDate = document.getElementById('event-filter-date');   // New
+        
+        // Enrollee upload elements
+        const eventSelectUpload = document.getElementById('event-select-upload');
+        const uploadForm = document.getElementById('upload-form');
+        const excelFileInput = document.getElementById('excel-file');
+        const enrolleesDisplay = document.getElementById('enrollees-display');
+        const enrolleesTableBody = document.getElementById('enrollees-table-body');
+        const saveEnrolleesButton = document.getElementById('save-enrollees-button');
+
+        // Attendance elements
+        const eventSelectAttendance = document.getElementById('event-select-attendance');
+        const attendanceSection = document.getElementById('attendance-section'); // New
+        const attendanceTableBody = document.getElementById('attendance-table-body');
+        const searchInputAttendance = document.getElementById('search-input-attendance');
+        
+        // QR Scanner elements
+        const qrReader = document.getElementById('qr-reader'); // New
+        const startQrScannerButton = document.getElementById('start-qr-scanner-button'); // New
+        const stopQrScannerButton = document.getElementById('stop-qr-scanner-button'); // New
+
+
+        // Elements for attendance counters and export buttons
+        const totalEnrolleesCount = document.getElementById('total-enrollees-count');
+        const attendedCount = document.getElementById('attended-count');
+        const notAttendedCount = document.getElementById('not-attended-count');
+        const exportAttendedButton = document.getElementById('export-attended-button');
+        const exportNotAttendedButton = document.getElementById('export-not-attended-button');
+        const addEnrolleeButton = document.getElementById('add-enrollee-button'); // New button
+
+        // Add Enrollee Modal elements
+        const addEnrolleeModal = document.getElementById('add-enrollee-modal');
+        const addEnrolleeForm = document.getElementById('add-enrollee-form');
+        const newEnrolleeRut = document.getElementById('new-enrollee-rut');
+        // Removed newEnrolleeId from here
+        const newEnrolleeNombre = document.getElementById('new-enrollee-nombre');
+        const newEnrolleeApellidoPaterno = document.getElementById('new-enrollee-apellido-paterno');
+        const newEnrolleeApellidoMaterno = document.getElementById('new-enrollee-apellido-materno');
+        const newEnrolleeEmail = document.getElementById('new-enrollee-email');
+        const cancelAddEnrolleeButton = document.getElementById('cancel-add-enrollee');
+
+
+        let parsedExcelData = []; // To store the parsed data from the Excel file
+        let allEnrollees = []; // To store all enrollees for the selected event
+        let allEvents = []; // To store all events for filtering
+        let html5QrcodeScanner = null; // Global instance for QR scanner, initialized to null
+
+        // Show a custom modal message
+        function showModal(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            messageModal.classList.remove('hidden');
+        }
+
+        // Close the custom modal
+        modalCloseButton.addEventListener('click', () => {
+            messageModal.classList.add('hidden');
+        });
+        
+        // Show a custom confirmation modal
+        function showConfirmModal(message, onConfirm) {
+            confirmMessage.textContent = message;
+            confirmModal.classList.remove('hidden');
+
+            confirmOkButton.onclick = () => {
+                onConfirm();
+                confirmModal.classList.add('hidden');
+            };
+
+            confirmCancelButton.onclick = () => {
+                confirmModal.classList.add('hidden');
+            };
+        }
+
+        // Function to toggle the sidebar
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+        });
+
+        // Function to switch between views
+        function showView(viewId, title) {
+            const allViews = document.querySelectorAll('#content-container > div');
+            allViews.forEach(view => view.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+            pageTitle.textContent = title;
+
+            // Stop QR scanner if navigating away from attendance view
+            if (viewId !== 'view-mark-attendance' && html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+                stopQrCodeScanner();
+            }
+        }
+
+        // Function to handle the authentication state and show the correct view
+        async function handleAuthState(user) {
+            if (user) {
+                loadingScreen.classList.add('hidden');
+                loginScreen.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+                
+                const userId = user.uid;
+                const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/user_profiles`, userId);
+                
+                // Listen for real-time updates to the user's profile
+                onSnapshot(userDocRef, (userDocSnap) => {
+                    const role = userDocSnap.exists() ? userDocSnap.data().role : 'user';
+                    
+                    userIdDisplay.textContent = userId;
+                    userRoleDisplay.textContent = role;
+
+                    if (role === 'admin') {
+                        menuUser.classList.add('hidden');
+                        menuAdmin.classList.remove('hidden');
+                        showView('view-user-management', 'Gestión de Usuarios');
+                    } else {
+                        menuAdmin.classList.add('hidden');
+                        menuUser.classList.remove('hidden');
+                        showView('view-events', 'Crear y Gestionar Eventos');
+                        loadEventsAndCounts(); // Load events for all views
+                    }
+                }, (error) => {
+                    console.error("Error al escuchar el perfil de usuario:", error);
+                    showModal('Error de base de datos', 'No se pudo cargar tu perfil de usuario. Por favor, inténtalo de nuevo.');
+                    loadingScreen.classList.add('hidden');
+                    loginScreen.classList.remove('hidden');
+                    mainApp.classList.add('hidden');
+                });
+
+            } else {
+                loadingScreen.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
+                mainApp.classList.add('hidden');
+            }
+        }
+
+        // Set up the auth state observer
+        onAuthStateChanged(auth, (user) => {
+            handleAuthState(user);
+        });
+
+        // Handle login form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = loginEmailInput.value;
+            const password = loginPasswordInput.value;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                loginForm.reset();
+            } catch (error) {
+                console.error("Error al iniciar sesión:", error);
+                let errorMessage = 'Ocurrió un error al iniciar sesión. Verifica tus credenciales.';
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    errorMessage = 'Credenciales no válidas.';
+                }
+                showModal('Error de inicio de sesión', errorMessage);
+            }
+        });
+
+        // Handle form submission to create a new user
+        createUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = newUserEmailInput.value;
+            const password = newUserPasswordInput.value;
+
+            try {
+                const currentUserId = auth.currentUser.uid;
+                const userDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/user_profiles`, currentUserId);
+                const userDocSnap = await getDoc(userDocRef);
+                
+                if (userDocSnap.exists() && userDocSnap.data().role === 'admin') {
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                    const newUserId = userCredential.user.uid;
+                    const newUserProfileRef = doc(db, `artifacts/${appId}/users/${newUserId}/user_profiles`, newUserId);
+                    await setDoc(newUserProfileRef, {
+                        uid: newUserId,
+                        email: email,
+                        role: 'user',
+                        createdAt: new Date()
+                    });
+                    
+                    showModal('Éxito', `Usuario con correo electrónico ${email} creado exitosamente.`);
+                    createUserForm.reset();
+                } else {
+                    showModal('Acceso denegado', 'No tienes los permisos de administrador para realizar esta acción.');
+                }
+            } catch (error) {
+                console.error("Error al crear usuario:", error);
+                let errorMessage = "Ocurrió un error inesperado al crear el usuario.";
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'El correo electrónico ya está en uso. Por favor, usa otro.';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'La contraseña debe tener al menos 6 caracteres.';
+                }
+                showModal('Error', errorMessage);
+            }
+        });
+
+        // Event listener for menu items to switch views
+        document.getElementById('menu-user-management').addEventListener('click', (e) => {
+            e.preventDefault();
+            showView('view-user-management', 'Gestión de Usuarios');
+        });
+        document.getElementById('menu-events').addEventListener('click', (e) => {
+            e.preventDefault();
+            showView('view-events', 'Crear y Gestionar Eventos');
+            // Clear search and filter when navigating to events view
+            eventSearchInput.value = '';
+            eventFilterDate.value = '';
+            filterAndDisplayEvents(); // Re-apply filters with empty values to show all
+        });
+        document.getElementById('menu-upload-enrollees').addEventListener('click', (e) => {
+            e.preventDefault();
+            showView('view-upload-enrollees', 'Cargar Lista de Inscritos');
+        });
+        document.getElementById('menu-mark-attendance').addEventListener('click', (e) => {
+            e.preventDefault();
+            showView('view-mark-attendance', 'Tomar Asistencia');
+            searchInputAttendance.value = ''; // Clear search on view change
+            // Reset QR scanner state when entering attendance view
+            qrReader.innerHTML = '';
+            startQrScannerButton.classList.remove('hidden');
+            stopQrScannerButton.classList.add('hidden');
+        });
+
+        // Handle logout
+        function handleLogout() {
+            signOut(auth).then(() => {
+                console.log("Sesión cerrada correctamente.");
+            }).catch((error) => {
+                console.error("Error al cerrar sesión:", error);
+                showModal('Error al cerrar sesión', 'No se pudo cerrar la sesión. Por favor, inténtalo de nuevo.');
+            });
+        }
+        
+        logoutButton.addEventListener('click', handleLogout);
+
+        // --- Funcionalidades de Eventos (User) ---
+
+        // Function to load all events and populate UI elements
+        function loadEventsAndCounts() {
+            const eventsCollectionRef = collection(db, `artifacts/${appId}/public/data/events`);
+            onSnapshot(eventsCollectionRef, (querySnapshot) => {
+                allEvents = []; // Store all events
+                querySnapshot.forEach((doc) => {
+                    allEvents.push({ id: doc.id, ...doc.data() });
+                });
+                
+                eventCounter.textContent = allEvents.length;
+                filterAndDisplayEvents(); // Apply filters initially
+                populateEventSelectors(allEvents);
+            });
+        }
+
+        // New function to filter and display events
+        function filterAndDisplayEvents() {
+            const searchText = eventSearchInput.value.toLowerCase().trim();
+            const filterDate = eventFilterDate.value; // YYYY-MM-DD format
+
+            let filteredEvents = allEvents;
+
+            // Filter by search text
+            if (searchText) {
+                filteredEvents = filteredEvents.filter(event => 
+                    event.name.toLowerCase().includes(searchText)
+                );
+            }
+
+            // Filter by date
+            if (filterDate) {
+                filteredEvents = filteredEvents.filter(event => 
+                    event.date === filterDate
+                );
+            }
+
+            displayEventsList(filteredEvents);
+        }
+
+        // Event listeners for event search and filter
+        eventSearchInput.addEventListener('keyup', filterAndDisplayEvents);
+        eventFilterDate.addEventListener('change', filterAndDisplayEvents);
+
+
+        // Display event cards
+        function displayEventsList(events) {
+            eventsList.innerHTML = ''; // Clear previous cards
+            events.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
+            // const currentUserRole = userRoleDisplay.textContent; // Removed role check
+
+            events.forEach(event => {
+                const eventCard = document.createElement('div');
+                eventCard.className = 'bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500';
+                
+                let buttonsHtml = '';
+                // Edit and Delete buttons are now always visible
+                buttonsHtml += `
+                    <button class="edit-event-button py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-500 hover:bg-yellow-600 transition-all duration-200" data-id="${event.id}">
+                        <i class="fa-solid fa-pen-to-square mr-2"></i>Editar
+                    </button>
+                    <button class="delete-event-button py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-all duration-200" data-id="${event.id}">
+                        <i class="fa-solid fa-trash-can mr-2"></i>Eliminar
+                    </button>
+                `;
+                // Always show Take Attendance button
+                buttonsHtml += `
+                    <button class="take-attendance-button py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 transition-all duration-200" data-id="${event.id}">
+                        <i class="fa-solid fa-clipboard-check mr-2"></i>Tomar Asistencia
+                    </button>
+                `;
+
+                eventCard.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="text-xl font-bold text-gray-800">${event.name}</h4>
+                        <span class="bg-gray-200 text-gray-700 text-sm font-semibold px-3 py-1 rounded-full">${event.enrolleeCount || 0} inscritos</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-4">Fecha: ${event.date}</p>
+                    <div class="flex space-x-2">
+                        ${buttonsHtml}
+                    </div>
+                `;
+                eventsList.appendChild(eventCard);
+            });
+            // Add event listeners for new buttons
+            document.querySelectorAll('.edit-event-button').forEach(button => {
+                button.addEventListener('click', handleEditEvent);
+            });
+            document.querySelectorAll('.delete-event-button').forEach(button => {
+                button.addEventListener('click', handleDeleteEvent);
+            });
+            document.querySelectorAll('.take-attendance-button').forEach(button => {
+                button.addEventListener('click', handleTakeAttendance);
+            });
+        }
+        
+        // Handle take attendance button click
+        function handleTakeAttendance(e) {
+            const eventId = e.currentTarget.dataset.id;
+            // Switch to the attendance view
+            showView('view-mark-attendance', 'Tomar Asistencia');
+            // Select the corresponding event in the attendance dropdown
+            eventSelectAttendance.value = eventId;
+            // Manually trigger the change event to load the attendance list
+            eventSelectAttendance.dispatchEvent(new Event('change'));
+        }
+
+        // Handle edit event button click
+        async function handleEditEvent(e) {
+            const eventId = e.currentTarget.dataset.id;
+            const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+            const eventDocSnap = await getDoc(eventDocRef);
+            
+            if (eventDocSnap.exists()) {
+                const eventData = eventDocSnap.data();
+                eventIdInput.value = eventId;
+                eventNameInput.value = eventData.name;
+                eventDateInput.value = eventData.date;
+                saveEventButton.textContent = 'Guardar Cambios';
+                cancelEditButton.classList.remove('hidden');
+            }
+        }
+        
+        // Handle delete event button click
+        function handleDeleteEvent(e) {
+            const eventId = e.currentTarget.dataset.id;
+            showConfirmModal('¿Estás seguro de que quieres eliminar este evento y todos sus inscritos? Esta acción no se puede deshacer.', async () => {
+                try {
+                    const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+                    const enrolleesCollectionRef = collection(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`);
+                    const enrolleeDocs = await getDocs(enrolleesCollectionRef);
+                    
+                    // Use a batch to delete all enrollees in one go
+                    const batch = writeBatch(db);
+                    enrolleeDocs.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+
+                    // Now delete the event document itself
+                    await deleteDoc(eventDocRef);
+
+                    showModal('Éxito', 'Evento y sus inscritos eliminados exitosamente.');
+                } catch (error) {
+                    console.error("Error al eliminar evento:", error);
+                    showModal('Error', 'Hubo un error al eliminar el evento. Por favor, inténtalo de nuevo.');
+                }
+            });
+        }
+        
+        // Handle cancel edit button click
+        cancelEditButton.addEventListener('click', () => {
+            eventForm.reset();
+            eventIdInput.value = '';
+            saveEventButton.textContent = 'Crear Evento';
+            cancelEditButton.classList.add('hidden');
+        });
+
+        // Handle event form submission (create or update)
+        eventForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const eventId = eventIdInput.value;
+            const eventName = eventNameInput.value;
+            const eventDate = eventDateInput.value;
+
+            try {
+                if (eventId) {
+                    // Update existing event
+                    const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+                    await setDoc(eventDocRef, {
+                        name: eventName,
+                        date: eventDate,
+                    }, { merge: true });
+                    showModal('Éxito', `Evento "${eventName}" actualizado exitosamente.`);
+                } else {
+                    // Create new event
+                    const eventsCollectionRef = collection(db, `artifacts/${appId}/public/data/events`);
+                    await addDoc(eventsCollectionRef, {
+                        name: eventName,
+                        date: eventDate,
+                        enrolleeCount: 0, // Initialize enrollee counter
+                        ownerId: auth.currentUser.uid,
+                        createdAt: new Date()
+                    });
+                    showModal('Éxito', `Evento "${eventName}" creado exitosamente.`);
+                }
+                eventForm.reset();
+                eventIdInput.value = '';
+                saveEventButton.textContent = 'Crear Evento';
+                cancelEditButton.classList.add('hidden');
+            } catch (error) {
+                console.error("Error al guardar evento:", error);
+                showModal('Error', 'Hubo un error al guardar el evento. Por favor, inténtalo de nuevo.');
+            }
+        });
+
+        // --- Funcionalidades de Cargar Inscritos y Asistencia ---
+
+        // Function to load events into selectors for upload/attendance views
+        function populateEventSelectors(events) {
+            eventSelectUpload.innerHTML = '<option value="">Selecciona un evento...</option>';
+            eventSelectAttendance.innerHTML = '<option value="">Selecciona un evento...</option>';
+
+            events.forEach(event => {
+                const optionText = `${event.name} (${event.date}) - (${event.enrolleeCount || 0} inscritos)`;
+                
+                const optionUpload = document.createElement('option');
+                optionUpload.value = event.id;
+                optionUpload.textContent = optionText;
+                eventSelectUpload.appendChild(optionUpload);
+
+                const optionAttendance = document.createElement('option');
+                optionAttendance.value = event.id;
+                optionAttendance.textContent = optionText;
+                eventSelectAttendance.appendChild(optionAttendance);
+            });
+        }
+        
+        // 2. Cargar Inscritos
+        uploadForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const file = excelFileInput.files[0];
+            const eventId = eventSelectUpload.value;
+
+            if (!file) {
+                showModal('Error', 'Por favor, selecciona un archivo de Excel.');
+                return;
+            }
+            if (!eventId) {
+                showModal('Error', 'Por favor, selecciona un evento.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                
+                if (json.length < 2) {
+                    showModal('Error', 'El archivo no contiene datos.');
+                    return;
+                }
+                const header = json[0];
+                // Update required headers to include "Id"
+                const requiredHeaders = ['Rut', 'Id', 'Nombre', 'Apellido Paterno', 'Apellido Materno', 'Email'];
+                if (!requiredHeaders.every(h => header.includes(h))) {
+                    showModal('Error', `El archivo de Excel debe contener las siguientes columnas: ${requiredHeaders.join(', ')}.`);
+                    return;
+                }
+
+                parsedExcelData = json.slice(1).map(row => {
+                    const enrollee = {};
+                    header.forEach((h, i) => {
+                        enrollee[h.replace(/\s/g, '')] = row[i];
+                    });
+                    return enrollee;
+                }).filter(enrollee => enrollee.Rut); // Filter out rows without a Rut
+                
+                if (parsedExcelData.length === 0) {
+                     showModal('Error', 'No se encontraron inscritos válidos con RUT en el archivo.');
+                     return;
+                }
+                
+                displayEnrolleesTable(parsedExcelData);
+                enrolleesDisplay.classList.remove('hidden');
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Update this function to not display the "Id" column
+        function displayEnrolleesTable(data) {
+            enrolleesTableBody.innerHTML = '';
+            data.forEach(enrollee => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${enrollee.Rut || ''}</td>
+                    <td>${enrollee.Nombre || ''}</td>
+                    <td>${enrollee.ApellidoPaterno || ''}</td>
+                    <td>${enrollee.ApellidoMaterno || ''}</td>
+                    <td>${enrollee.Email || ''}</td>
+                `;
+                enrolleesTableBody.appendChild(row);
+            });
+        }
+        
+        saveEnrolleesButton.addEventListener('click', async () => {
+            const eventId = eventSelectUpload.value;
+            if (!eventId || parsedExcelData.length === 0) {
+                showModal('Error', 'No hay datos de inscritos o evento seleccionado para guardar.');
+                return;
+            }
+
+            try {
+                // Use a batch to perform multiple writes efficiently
+                const batch = writeBatch(db);
+                const enrolleesCollectionRef = collection(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`);
+
+                parsedExcelData.forEach(enrollee => {
+                    // Use the Rut as the document ID
+                    const enrolleeDocRef = doc(enrolleesCollectionRef, enrollee.Rut.toString());
+                    batch.set(enrolleeDocRef, {
+                        ...enrollee,
+                        attended: false,
+                        createdAt: new Date()
+                    }, { merge: true });
+                });
+                
+                await batch.commit();
+
+                // Update the enrollee count on the parent event document
+                const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+                await setDoc(eventDocRef, { enrolleeCount: parsedExcelData.length }, { merge: true });
+                
+                showModal('Éxito', `Se han guardado ${parsedExcelData.length} inscritos para el evento.`);
+                uploadForm.reset();
+                enrolleesDisplay.classList.add('hidden');
+                parsedExcelData = [];
+            } catch (error) {
+                console.error("Error al guardar inscritos:", error);
+                showModal('Error', 'Hubo un error al guardar los inscritos. Por favor, inténtalo de nuevo.');
+            }
+        });
+
+
+        // 3. Tomar Asistencia
+        eventSelectAttendance.addEventListener('change', (e) => {
+            const eventId = e.target.value;
+            if (eventId) {
+                loadAttendanceList(eventId);
+                attendanceSection.classList.remove('hidden'); // Show the attendance section
+                exportAttendedButton.disabled = false;
+                exportNotAttendedButton.disabled = false;
+                addEnrolleeButton.disabled = false; // Enable add enrollee button
+            } else {
+                attendanceSection.classList.add('hidden'); // Hide the attendance section
+                allEnrollees = [];
+                // Reset counters
+                totalEnrolleesCount.textContent = '0';
+                attendedCount.textContent = '0';
+                notAttendedCount.textContent = '0';
+                exportAttendedButton.disabled = true;
+                exportNotAttendedButton.disabled = true;
+                addEnrolleeButton.disabled = true; // Disable add enrollee button
+            }
+            searchInputAttendance.value = '';
+            // Stop scanner if event changes
+            if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+                stopQrCodeScanner();
+            }
+        });
+
+        // Event listener for the search input
+        searchInputAttendance.addEventListener('keyup', (e) => {
+            filterAndDisplayAttendance(e.target.value);
+        });
+
+        // Function to load attendance list from Firestore
+        function loadAttendanceList(eventId) {
+            const enrolleesCollectionRef = collection(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`);
+            onSnapshot(enrolleesCollectionRef, (querySnapshot) => {
+                allEnrollees = [];
+                querySnapshot.forEach((doc) => {
+                    allEnrollees.push({ id: doc.id, ...doc.data() });
+                });
+                // Update counters with the new data
+                updateAttendanceCounters();
+                // Display all enrollees initially or based on the current search
+                filterAndDisplayAttendance(searchInputAttendance.value);
+            });
+        }
+        
+        // New function to update the attendance counters
+        function updateAttendanceCounters() {
+            const total = allEnrollees.length;
+            const attended = allEnrollees.filter(enrollee => enrollee.attended).length;
+            const notAttended = total - attended;
+
+            totalEnrolleesCount.textContent = total;
+            attendedCount.textContent = attended;
+            notAttendedCount.textContent = notAttended;
+        }
+
+        // Function to filter enrollees and display the table
+        function filterAndDisplayAttendance(searchText) {
+            const normalizedSearchText = searchText.toLowerCase().trim();
+            let filteredEnrollees = allEnrollees;
+
+            if (normalizedSearchText) {
+                filteredEnrollees = allEnrollees.filter(enrollee => {
+                    const rut = enrollee.Rut?.toString().toLowerCase() || '';
+                    const fullName = `${enrollee.Nombre || ''} ${enrollee.ApellidoPaterno || ''} ${enrollee.ApellidoMaterno || ''}`.toLowerCase();
+                    return rut.includes(normalizedSearchText) || fullName.includes(normalizedSearchText);
+                });
+            }
+            displayAttendanceTable(filteredEnrollees, eventSelectAttendance.value);
+        }
+
+
+        // Function to display the attendance table
+        function displayAttendanceTable(enrollees, eventId) {
+            attendanceTableBody.innerHTML = '';
+            enrollees.forEach(enrollee => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${enrollee.Rut || ''}</td>
+                    <td>${enrollee.Nombre || ''} ${enrollee.ApellidoPaterno || ''} ${enrollee.ApellidoMaterno || ''}</td>
+                    <td>${enrollee.Email || ''}</td>
+                    <td>
+                        <input type="checkbox" id="attendance-${enrollee.Rut}" data-rut="${enrollee.Rut}" ${enrollee.attended ? 'checked' : ''} class="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                    </td>
+                `;
+                attendanceTableBody.appendChild(row);
+
+                const checkbox = row.querySelector(`#attendance-${enrollee.Rut}`);
+                checkbox.addEventListener('change', async (e) => {
+                    const isAttended = e.target.checked;
+                    const enrolleeRut = e.target.dataset.rut;
+                    
+                    try {
+                        const enrolleeDocRef = doc(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`, enrolleeRut);
+                        await setDoc(enrolleeDocRef, { attended: isAttended }, { merge: true });
+                        console.log(`Asistencia de ${enrolleeRut} actualizada.`);
+                    } catch (error) {
+                        console.error("Error al actualizar asistencia:", error);
+                        showModal('Error', 'Hubo un error al actualizar la asistencia. Por favor, inténtalo de nuevo.');
+                    }
+                });
+            });
+        }
+        
+        // Function to export data to an Excel file
+        function exportToExcel(data, filename) {
+            if (data.length === 0) {
+                showModal('Información', 'No hay datos para exportar.');
+                return;
+            }
+
+            const header = ["Id", "Rut", "Nombre", "Apellido Paterno", "Apellido Materno", "Email"];
+            const excelData = [header, ...data.map(enrollee => [
+                enrollee.Id || '',
+                enrollee.Rut || '',
+                enrollee.Nombre || '',
+                enrollee.ApellidoPaterno || '',
+                enrollee.ApellidoMaterno || '',
+                enrollee.Email || ''
+            ])];
+
+            const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Asistencia");
+            XLSX.writeFile(workbook, filename);
+        }
+
+        // Event listener for the "Exportar Asistentes" button
+        exportAttendedButton.addEventListener('click', () => {
+            const eventId = eventSelectAttendance.value;
+            if (!eventId) {
+                showModal('Error', 'Por favor, selecciona un evento primero.');
+                return;
+            }
+            const attendedEnrollees = allEnrollees.filter(enrollee => enrollee.attended);
+            const eventName = eventSelectAttendance.options[eventSelectAttendance.selectedIndex].text.split('(')[0].trim();
+            exportToExcel(attendedEnrollees, `Presentes_${eventName}.xlsx`);
+        });
+
+        // Event listener for the "Exportar No Asistentes" button
+        exportNotAttendedButton.addEventListener('click', () => {
+            const eventId = eventSelectAttendance.value;
+            if (!eventId) {
+                showModal('Error', 'Por favor, selecciona un evento primero.');
+                return;
+            }
+            const notAttendedEnrollees = allEnrollees.filter(enrollee => !enrollee.attended);
+            const eventName = eventSelectAttendance.options[eventSelectAttendance.selectedIndex].text.split('(')[0].trim();
+            exportToExcel(notAttendedEnrollees, `Ausentes_${eventName}.xlsx`);
+        });
+
+        // --- Add New Enrollee Manually Functionality ---
+        addEnrolleeButton.addEventListener('click', () => {
+            const eventId = eventSelectAttendance.value;
+            if (!eventId) {
+                showModal('Error', 'Por favor, selecciona un evento antes de agregar un inscrito.');
+                return;
+            }
+            addEnrolleeModal.classList.remove('hidden');
+        });
+
+        cancelAddEnrolleeButton.addEventListener('click', () => {
+            addEnrolleeModal.classList.add('hidden');
+            addEnrolleeForm.reset();
+        });
+
+        addEnrolleeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const eventId = eventSelectAttendance.value;
+            const rut = newEnrolleeRut.value.trim();
+            // Id is no longer taken from input, set to empty string
+            const id = ''; 
+            const nombre = newEnrolleeNombre.value.trim();
+            const apellidoPaterno = newEnrolleeApellidoPaterno.value.trim();
+            const apellidoMaterno = newEnrolleeApellidoMaterno.value.trim();
+            const email = newEnrolleeEmail.value.trim();
+
+            if (!rut || !nombre) {
+                showModal('Error', 'El Rut y el Nombre son campos obligatorios.');
+                return;
+            }
+
+            try {
+                const enrolleeDocRef = doc(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`, rut);
+                const enrolleeDocSnap = await getDoc(enrolleeDocRef);
+
+                if (enrolleeDocSnap.exists()) {
+                    showModal('Error', `Ya existe un inscrito con el Rut: ${rut} para este evento.`);
+                    return;
+                }
+
+                await setDoc(enrolleeDocRef, {
+                    Rut: rut,
+                    Id: id, // Id is now an empty string
+                    Nombre: nombre,
+                    ApellidoPaterno: apellidoPaterno,
+                    ApellidoMaterno: apellidoMaterno,
+                    Email: email,
+                    attended: false,
+                    createdAt: new Date()
+                });
+
+                // Update enrollee count for the event
+                const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+                const eventDocSnap = await getDoc(eventDocRef);
+                const currentEnrolleeCount = eventDocSnap.exists() ? (eventDocSnap.data().enrolleeCount || 0) : 0;
+                await setDoc(eventDocRef, { enrolleeCount: currentEnrolleeCount + 1 }, { merge: true });
+
+                showModal('Éxito', `Inscrito ${nombre} ${apellidoPaterno} agregado exitosamente.`);
+                addEnrolleeForm.reset();
+                addEnrolleeModal.classList.add('hidden');
+            } catch (error) {
+                console.error("Error al agregar inscrito manualmente:", error);
+                showModal('Error', 'Hubo un error al agregar el inscrito. Por favor, inténtalo de nuevo.');
+            }
+        });
+
+        // --- QR Scanner Functionality ---
+        async function startQrCodeScanner() {
+            const eventId = eventSelectAttendance.value;
+            if (!eventId) {
+                showModal('Error', 'Por favor, selecciona un evento para iniciar el escáner QR.');
+                return;
+            }
+
+            try {
+                if (!html5QrcodeScanner) {
+                    console.log("Creando nueva instancia de Html5QrcodeScanner...");
+                    html5QrcodeScanner = new Html5QrcodeScanner(
+                        "qr-reader",
+                        { 
+                            fps: 10, 
+                            qrbox: { width: 250, height: 250 },
+                            disableFlip: false 
+                        },
+                        /* verbose= */ true // Set to true for more detailed logs from the library
+                    );
+                } else {
+                    // If already instantiated, clear it before rendering again to avoid conflicts
+                    if (html5QrcodeScanner.isScanning) {
+                        await html5QrcodeScanner.stop(); // Stop any existing scanning
+                    }
+                    html5QrcodeScanner.clear(); // Clear the QR reader element
+                }
+
+                console.log("Iniciando escáner QR...");
+                startQrScannerButton.classList.add('hidden');
+                stopQrScannerButton.classList.remove('hidden');
+                qrReader.style.display = 'block';
+
+                let startedSuccessfully = false;
+
+                // Attempt 1: Try with 'environment' facing mode first
+                try {
+                    console.log("Intentando renderizar con facingMode: 'environment'...");
+                    await html5QrcodeScanner.render(
+                        { facingMode: "environment" },
+                        (decodedText, decodedResult) => { // onScanSuccess
+                            console.log(`QR escaneado exitosamente (environment mode): ${decodedText}`, decodedResult);
+                            markAttendanceByRut(decodedText);
+                        },
+                        (errorMessage) => { // onScanError
+                            // This callback is called frequently during active scanning, don't log verbosely here.
+                            // console.warn(`Error de escaneo QR (environment mode): ${errorMessage}`);
+                        }
+                    );
+                    console.log("Escáner renderizado con facingMode: 'environment'.");
+                    startedSuccessfully = true;
+                } catch (envError) {
+                    console.warn("Fallo al renderizar con facingMode: 'environment'.", envError);
+                }
+
+                // If 'environment' failed, try with 'user' facing mode
+                if (!startedSuccessfully) {
+                    try {
+                        console.log("Intentando renderizar con facingMode: 'user'...");
+                        await html5QrcodeScanner.render(
+                            { facingMode: "user" },
+                            (decodedText, decodedResult) => { // onScanSuccess
+                                console.log(`QR escaneado exitosamente (user mode): ${decodedText}`, decodedResult);
+                                markAttendanceByRut(decodedText);
+                            },
+                            (errorMessage) => { // onScanError
+                                // console.warn(`Error de escaneo QR (user mode): ${errorMessage}`);
+                            }
+                        );
+                        console.log("Escáner renderizado con facingMode: 'user'.");
+                        startedSuccessfully = true;
+                    } catch (userError) {
+                        console.warn("Fallo al renderizar con facingMode: 'user'.", userError);
+                    }
+                }
+
+                // If both facing modes failed, try enumerating cameras and use the first ID
+                if (!startedSuccessfully) {
+                    try {
+                        console.log("Intentando enumerar cámaras y renderizar con la primera detectada...");
+                        const cameras = await Html5Qrcode.getCameras();
+                        if (cameras && cameras.length > 0) {
+                            const cameraIdToUse = cameras[0].id;
+                            console.log(`Usando la primera cámara detectada por ID: ${cameras[0].label || cameras[0].id}`);
+                            await html5QrcodeScanner.render(
+                                cameraIdToUse,
+                                (decodedText, decodedResult) => { // onScanSuccess
+                                    console.log(`QR escaneado exitosamente (por ID): ${decodedText}`, decodedResult);
+                                    markAttendanceByRut(decodedText);
+                                },
+                                (errorMessage) => { // onScanError
+                                    // console.warn(`Error de escaneo QR (por ID): ${errorMessage}`);
+                                }
+                            );
+                            console.log("Escáner renderizado con ID de cámara.");
+                            startedSuccessfully = true;
+                        } else {
+                            console.warn("No se detectaron cámaras por getCameras() como último recurso.");
+                        }
+                    } catch (enumError) {
+                        console.error("Error al enumerar cámaras como último recurso:", enumError);
+                    }
+                }
+
+                if (!startedSuccessfully) {
+                    // If we reach here, all attempts to start the scanner have failed
+                    console.error("Fallo definitivo al iniciar el escáner QR con todas las configuraciones.");
+                    showModal('Error de Cámara', `No se pudo iniciar la cámara para escanear QR después de varios intentos. Asegúrate de haber dado permisos y que una cámara esté conectada y no esté en uso. Detalles técnicos en la consola.`);
+                    startQrScannerButton.classList.remove('hidden');
+                    stopQrScannerButton.classList.add('hidden');
+                }
+
+            } catch (err) {
+                console.error("Error inesperado al intentar iniciar el escáner QR:", err);
+                showModal('Error de Cámara', `Ocurrió un error inesperado al iniciar la cámara. Asegúrate de los permisos. Error: ${err.name} - ${err.message}`);
+                startQrScannerButton.classList.remove('hidden');
+                stopQrScannerButton.classList.add('hidden');
+            }
+        }
+
+        function stopQrCodeScanner() {
+            if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
+                console.log("Deteniendo escáner QR...");
+                html5QrcodeScanner.stop().then(() => {
+                    console.log("Escáner QR detenido.");
+                    qrReader.innerHTML = ''; // Limpiar el feed de la cámara
+                    qrReader.style.display = 'block'; 
+                    startQrScannerButton.classList.remove('hidden');
+                    stopQrScannerButton.classList.add('hidden');
+                }).catch((err) => {
+                    console.error("Error al detener el escáner QR:", err);
+                    showModal('Error', 'Error al detener el escáner QR. Por favor, revisa la consola para más detalles.');
+                });
+            } else {
+                console.log("Escáner QR no está activo para detener.");
+                qrReader.innerHTML = ''; 
+                startQrScannerButton.classList.remove('hidden');
+                stopQrScannerButton.classList.add('hidden');
+            }
+        }
+
+        async function markAttendanceByRut(rut) {
+            const eventId = eventSelectAttendance.value;
+            if (!eventId) {
+                showModal('Error', 'Por favor, selecciona un evento primero.');
+                return;
+            }
+
+            const normalizedRut = rut.trim(); 
+            const enrolleeDocRef = doc(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`, normalizedRut);
+
+            try {
+                const enrolleeDocSnap = await getDoc(enrolleeDocRef);
+                if (enrolleeDocSnap.exists()) {
+                    const enrolleeData = enrolleeDocSnap.data();
+                    if (!enrolleeData.attended) {
+                        await setDoc(enrolleeDocRef, { attended: true }, { merge: true });
+                        showModal('Asistencia Marcada', `Asistencia marcada para: ${enrolleeData.Nombre || ''} ${enrolleeData.ApellidoPaterno || ''}.`);
+                    } else {
+                        showModal('Información', `${enrolleeData.Nombre || ''} ${enrolleeData.ApellidoPaterno || ''} ya ha registrado asistencia.`);
+                    }
+                } else {
+                    showModal('Error', `Inscrito con RUT "${rut}" no encontrado para este evento. Verifica el RUT o agrégalo manualmente.`);
+                }
+            } catch (error) {
+                console.error("Error al marcar asistencia por QR:", error);
+                showModal('Error', 'Hubo un error al marcar la asistencia. Por favor, inténtalo de nuevo.');
+            }
+        }
+
+        startQrScannerButton.addEventListener('click', startQrCodeScanner);
+        stopQrScannerButton.addEventListener('click', stopQrCodeScanner);
+
+        // Initial check for a user on page load
+        window.onload = () => {
+            loadingScreen.classList.remove('hidden');
+        };
+
+    </script>
+</body>
+</html>
