@@ -1318,29 +1318,22 @@
                 // Mark attendance with the processed RUT
                 markAttendanceByRut(rutToProcess);
             };
-            
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5Qrcode("qr-reader");
-            }
 
-            try {
-                await html5QrcodeScanner.start(
-                    { facingMode: "environment" }, // prefer back camera
-                    {
-                        fps: 10,
-                        qrbox: { width: 250, height: 250 }
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "qr-reader",
+                    { 
+                        fps: 10, 
+                        qrbox: { width: 250, height: 250 },
+                        disableFlip: false 
                     },
-                    onScanSuccess,
-                    (errorMessage) => { /* onScanError */ }
+                    /* verbose= */ true // Set to true for more detailed logs from the library
                 );
-                startQrScannerButton.classList.add('hidden');
-                stopQrScannerButton.classList.remove('hidden');
-            } catch (err) {
-                console.error("Error al iniciar el escáner QR:", err);
-                showModal('Error de Cámara', `No se pudo iniciar la cámara. Asegúrate de haber dado los permisos necesarios. Error: ${err}`);
-                startQrScannerButton.classList.remove('hidden');
-                stopQrScannerButton.classList.add('hidden');
             }
+            
+            html5QrcodeScanner.render(onScanSuccess, (errorMessage) => { /* onScanError */ });
+            startQrScannerButton.classList.add('hidden');
+            stopQrScannerButton.classList.remove('hidden');
         }
 
         function stopQrCodeScanner() {
@@ -1349,6 +1342,7 @@
                 html5QrcodeScanner.stop().then(() => {
                     console.log("Escáner QR detenido.");
                     qrReader.innerHTML = ''; // Limpiar el feed de la cámara
+                    qrReader.style.display = 'block'; 
                     startQrScannerButton.classList.remove('hidden');
                     stopQrScannerButton.classList.add('hidden');
                 }).catch((err) => {
