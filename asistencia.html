@@ -1318,80 +1318,26 @@
                 // Mark attendance with the processed RUT
                 markAttendanceByRut(rutToProcess);
             };
+            
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5Qrcode("qr-reader");
+            }
 
             try {
-                if (!html5QrcodeScanner) {
-                    console.log("Creando nueva instancia de Html5QrcodeScanner...");
-                    html5QrcodeScanner = new Html5QrcodeScanner(
-                        "qr-reader",
-                        { 
-                            fps: 10, 
-                            qrbox: { width: 250, height: 250 },
-                            disableFlip: false 
-                        },
-                        /* verbose= */ true // Set to true for more detailed logs from the library
-                    );
-                } else {
-                    // If already instantiated, clear it before rendering again to avoid conflicts
-                    if (html5QrcodeScanner.isScanning) {
-                        await html5QrcodeScanner.stop(); // Stop any existing scanning
-                    }
-                    html5QrcodeScanner.clear(); // Clear the QR reader element
-                }
-
-                console.log("Iniciando escáner QR...");
+                await html5QrcodeScanner.start(
+                    { facingMode: "environment" }, // prefer back camera
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    onScanSuccess,
+                    (errorMessage) => { /* onScanError */ }
+                );
                 startQrScannerButton.classList.add('hidden');
                 stopQrScannerButton.classList.remove('hidden');
-                qrReader.style.display = 'block';
-
-                let startedSuccessfully = false;
-
-                // Attempt 1: Try with 'environment' facing mode first
-                try {
-                    console.log("Intentando renderizar con facingMode: 'environment'...");
-                    await html5QrcodeScanner.render(
-                        onScanSuccess,
-                        (errorMessage) => { /* onScanError */ }
-                    );
-                    console.log("Escáner renderizado con facingMode: 'environment'.");
-                    startedSuccessfully = true;
-                } catch (envError) {
-                    console.warn("Fallo al renderizar con facingMode: 'environment'.", envError);
-                }
-
-                // If 'environment' failed, try enumerating cameras and use the first ID
-                if (!startedSuccessfully) {
-                    try {
-                        console.log("Intentando enumerar cámaras y renderizar con la primera detectada...");
-                        const cameras = await Html5Qrcode.getCameras();
-                        if (cameras && cameras.length > 0) {
-                            const cameraIdToUse = cameras[0].id;
-                            console.log(`Usando la primera cámara detectada por ID: ${cameras[0].label || cameras[0].id}`);
-                            await html5QrcodeScanner.render(
-                                onScanSuccess,
-                                (errorMessage) => { /* onScanError */ }
-                            );
-                            console.log("Escáner renderizado con ID de cámara.");
-                            startedSuccessfully = true;
-                        } else {
-                            console.warn("No se detectaron cámaras por getCameras() como último recurso.");
-                        }
-                    } catch (enumError) {
-                        console.error("Error al enumerar cámaras como último recurso:", enumError);
-                    }
-                }
-
-                if (!startedSuccessfully) {
-                    // If we reach here, all attempts to start the scanner have failed
-                    console.error("Fallo definitivo al iniciar el escáner QR con todas las configuraciones.");
-                    showModal('Error de Cámara', `No se pudo iniciar la cámara para escanear QR después de varios intentos. Asegúrate de haber dado permisos y que una cámara esté conectada y no esté en uso. Detalles técnicos en la consola.`);
-                    startQrScannerButton.classList.remove('hidden');
-                    stopQrScannerButton.classList.add('hidden');
-                }
-
             } catch (err) {
-                console.error("Error inesperado al intentar iniciar el escáner QR:", err);
-                showModal('Error de Cámara', `Ocurrió un error inesperado al iniciar la cámara. Asegúrate de los permisos. Error: ${err.name} - ${err.message}`);
+                console.error("Error al iniciar el escáner QR:", err);
+                showModal('Error de Cámara', `No se pudo iniciar la cámara. Asegúrate de haber dado los permisos necesarios. Error: ${err}`);
                 startQrScannerButton.classList.remove('hidden');
                 stopQrScannerButton.classList.add('hidden');
             }
@@ -1403,7 +1349,6 @@
                 html5QrcodeScanner.stop().then(() => {
                     console.log("Escáner QR detenido.");
                     qrReader.innerHTML = ''; // Limpiar el feed de la cámara
-                    qrReader.style.display = 'block'; 
                     startQrScannerButton.classList.remove('hidden');
                     stopQrScannerButton.classList.add('hidden');
                 }).catch((err) => {
