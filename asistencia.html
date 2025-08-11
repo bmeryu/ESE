@@ -17,7 +17,6 @@
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
         }
-        /* Removed .container max-width as it's now handled by flex and specific login styles */
         .loading-spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             border-top: 4px solid #3b82f6;
@@ -435,15 +434,14 @@
         // Global variables provided by the canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "AIzaSyA1PhJqJb8nrncHSTMcEfgkVor8Oswnark",
-            authDomain: "sistema-de-asistencia-ese.firebaseapp.com",
-            projectId: "sistema-de-asistencia-ese",
-            storageBucket: "sistema-de-asistencia-ese.firebasestorage.app",
-            messagingSenderId: "780601570468",
-            appId: "1:780601570468:web:d14a1c63c7a2407c5b6231",
-            measurementId: "G-QHRCXQEPMF"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? initialAuthToken : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -496,8 +494,8 @@
         const saveEventButton = document.getElementById('save-event-button');
         const cancelEditButton = document.getElementById('cancel-edit-button');
         const eventsList = document.getElementById('events-list');
-        const eventSearchInput = document.getElementById('event-search-input'); // New
-        const eventFilterDate = document.getElementById('event-filter-date');   // New
+        const eventSearchInput = document.getElementById('event-search-input');
+        const eventFilterDate = document.getElementById('event-filter-date');
         
         // Enrollee upload elements
         const eventSelectUpload = document.getElementById('event-select-upload');
@@ -509,14 +507,14 @@
 
         // Attendance elements
         const eventSelectAttendance = document.getElementById('event-select-attendance');
-        const attendanceSection = document.getElementById('attendance-section'); // New
+        const attendanceSection = document.getElementById('attendance-section');
         const attendanceTableBody = document.getElementById('attendance-table-body');
         const searchInputAttendance = document.getElementById('search-input-attendance');
         
         // QR Scanner elements
-        const qrReader = document.getElementById('qr-reader'); // New
-        const startQrScannerButton = document.getElementById('start-qr-scanner-button'); // New
-        const stopQrScannerButton = document.getElementById('stop-qr-scanner-button'); // New
+        const qrReader = document.getElementById('qr-reader');
+        const startQrScannerButton = document.getElementById('start-qr-scanner-button');
+        const stopQrScannerButton = document.getElementById('stop-qr-scanner-button');
 
 
         // Elements for attendance counters and export buttons
@@ -525,13 +523,12 @@
         const notAttendedCount = document.getElementById('not-attended-count');
         const exportAttendedButton = document.getElementById('export-attended-button');
         const exportNotAttendedButton = document.getElementById('export-not-attended-button');
-        const addEnrolleeButton = document.getElementById('add-enrollee-button'); // New button
+        const addEnrolleeButton = document.getElementById('add-enrollee-button');
 
         // Add Enrollee Modal elements
         const addEnrolleeModal = document.getElementById('add-enrollee-modal');
         const addEnrolleeForm = document.getElementById('add-enrollee-form');
         const newEnrolleeRut = document.getElementById('new-enrollee-rut');
-        // Removed newEnrolleeId from here
         const newEnrolleeNombre = document.getElementById('new-enrollee-nombre');
         const newEnrolleeApellidoPaterno = document.getElementById('new-enrollee-apellido-paterno');
         const newEnrolleeApellidoMaterno = document.getElementById('new-enrollee-apellido-materno');
@@ -539,10 +536,10 @@
         const cancelAddEnrolleeButton = document.getElementById('cancel-add-enrollee');
 
 
-        let parsedExcelData = []; // To store the parsed data from the Excel file
-        let allEnrollees = []; // To store all enrollees for the selected event
-        let allEvents = []; // To store all events for filtering
-        let html5QrcodeScanner = null; // Global instance for QR scanner, initialized to null
+        let parsedExcelData = [];
+        let allEnrollees = [];
+        let allEvents = [];
+        let html5QrcodeScanner = null;
 
         // Show a custom modal message
         function showModal(title, message) {
@@ -583,7 +580,6 @@
             document.getElementById(viewId).classList.remove('hidden');
             pageTitle.textContent = title;
 
-            // Stop QR scanner if navigating away from attendance view
             if (viewId !== 'view-mark-attendance' && html5QrcodeScanner && html5QrcodeScanner.isScanning) {
                 stopQrCodeScanner();
             }
@@ -599,7 +595,6 @@
                 const userId = user.uid;
                 const userDocRef = doc(db, `artifacts/${appId}/users/${userId}/user_profiles`, userId);
                 
-                // Listen for real-time updates to the user's profile
                 onSnapshot(userDocRef, (userDocSnap) => {
                     const role = userDocSnap.exists() ? userDocSnap.data().role : 'user';
                     
@@ -614,7 +609,7 @@
                         menuAdmin.classList.add('hidden');
                         menuUser.classList.remove('hidden');
                         showView('view-events', 'Crear y Gestionar Eventos');
-                        loadEventsAndCounts(); // Load events for all views
+                        loadEventsAndCounts();
                     }
                 }, (error) => {
                     console.error("Error al escuchar el perfil de usuario:", error);
@@ -702,10 +697,9 @@
         document.getElementById('menu-events').addEventListener('click', (e) => {
             e.preventDefault();
             showView('view-events', 'Crear y Gestionar Eventos');
-            // Clear search and filter when navigating to events view
             eventSearchInput.value = '';
             eventFilterDate.value = '';
-            filterAndDisplayEvents(); // Re-apply filters with empty values to show all
+            filterAndDisplayEvents();
         });
         document.getElementById('menu-upload-enrollees').addEventListener('click', (e) => {
             e.preventDefault();
@@ -714,8 +708,7 @@
         document.getElementById('menu-mark-attendance').addEventListener('click', (e) => {
             e.preventDefault();
             showView('view-mark-attendance', 'Tomar Asistencia');
-            searchInputAttendance.value = ''; // Clear search on view change
-            // Reset QR scanner state when entering attendance view
+            searchInputAttendance.value = '';
             qrReader.innerHTML = '';
             startQrScannerButton.classList.remove('hidden');
             stopQrScannerButton.classList.add('hidden');
@@ -735,36 +728,32 @@
 
         // --- Funcionalidades de Eventos (User) ---
 
-        // Function to load all events and populate UI elements
         function loadEventsAndCounts() {
             const eventsCollectionRef = collection(db, `artifacts/${appId}/public/data/events`);
             onSnapshot(eventsCollectionRef, (querySnapshot) => {
-                allEvents = []; // Store all events
+                allEvents = [];
                 querySnapshot.forEach((doc) => {
                     allEvents.push({ id: doc.id, ...doc.data() });
                 });
                 
                 eventCounter.textContent = allEvents.length;
-                filterAndDisplayEvents(); // Apply filters initially
+                filterAndDisplayEvents();
                 populateEventSelectors(allEvents);
             });
         }
 
-        // New function to filter and display events
         function filterAndDisplayEvents() {
             const searchText = eventSearchInput.value.toLowerCase().trim();
-            const filterDate = eventFilterDate.value; // YYYY-MM-DD format
+            const filterDate = eventFilterDate.value;
 
             let filteredEvents = allEvents;
 
-            // Filter by search text
             if (searchText) {
                 filteredEvents = filteredEvents.filter(event => 
                     event.name.toLowerCase().includes(searchText)
                 );
             }
 
-            // Filter by date
             if (filterDate) {
                 filteredEvents = filteredEvents.filter(event => 
                     event.date === filterDate
@@ -774,33 +763,24 @@
             displayEventsList(filteredEvents);
         }
 
-        // Event listeners for event search and filter
         eventSearchInput.addEventListener('keyup', filterAndDisplayEvents);
         eventFilterDate.addEventListener('change', filterAndDisplayEvents);
 
-
-        // Display event cards
         function displayEventsList(events) {
-            eventsList.innerHTML = ''; // Clear previous cards
-            events.sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
-            // const currentUserRole = userRoleDisplay.textContent; // Removed role check
+            eventsList.innerHTML = '';
+            events.sort((a, b) => new Date(b.date) - new Date(a.date));
 
             events.forEach(event => {
                 const eventCard = document.createElement('div');
                 eventCard.className = 'bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500';
                 
-                let buttonsHtml = '';
-                // Edit and Delete buttons are now always visible
-                buttonsHtml += `
+                let buttonsHtml = `
                     <button class="edit-event-button py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-500 hover:bg-yellow-600 transition-all duration-200" data-id="${event.id}">
                         <i class="fa-solid fa-pen-to-square mr-2"></i>Editar
                     </button>
                     <button class="delete-event-button py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-all duration-200" data-id="${event.id}">
                         <i class="fa-solid fa-trash-can mr-2"></i>Eliminar
                     </button>
-                `;
-                // Always show Take Attendance button
-                buttonsHtml += `
                     <button class="take-attendance-button py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 transition-all duration-200" data-id="${event.id}">
                         <i class="fa-solid fa-clipboard-check mr-2"></i>Tomar Asistencia
                     </button>
@@ -818,7 +798,7 @@
                 `;
                 eventsList.appendChild(eventCard);
             });
-            // Add event listeners for new buttons
+
             document.querySelectorAll('.edit-event-button').forEach(button => {
                 button.addEventListener('click', handleEditEvent);
             });
@@ -830,18 +810,13 @@
             });
         }
         
-        // Handle take attendance button click
         function handleTakeAttendance(e) {
             const eventId = e.currentTarget.dataset.id;
-            // Switch to the attendance view
             showView('view-mark-attendance', 'Tomar Asistencia');
-            // Select the corresponding event in the attendance dropdown
             eventSelectAttendance.value = eventId;
-            // Manually trigger the change event to load the attendance list
             eventSelectAttendance.dispatchEvent(new Event('change'));
         }
 
-        // Handle edit event button click
         async function handleEditEvent(e) {
             const eventId = e.currentTarget.dataset.id;
             const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
@@ -857,7 +832,6 @@
             }
         }
         
-        // Handle delete event button click
         function handleDeleteEvent(e) {
             const eventId = e.currentTarget.dataset.id;
             showConfirmModal('¿Estás seguro de que quieres eliminar este evento y todos sus inscritos? Esta acción no se puede deshacer.', async () => {
@@ -866,14 +840,12 @@
                     const enrolleesCollectionRef = collection(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`);
                     const enrolleeDocs = await getDocs(enrolleesCollectionRef);
                     
-                    // Use a batch to delete all enrollees in one go
                     const batch = writeBatch(db);
                     enrolleeDocs.forEach(doc => {
                         batch.delete(doc.ref);
                     });
                     await batch.commit();
 
-                    // Now delete the event document itself
                     await deleteDoc(eventDocRef);
 
                     showModal('Éxito', 'Evento y sus inscritos eliminados exitosamente.');
@@ -884,7 +856,6 @@
             });
         }
         
-        // Handle cancel edit button click
         cancelEditButton.addEventListener('click', () => {
             eventForm.reset();
             eventIdInput.value = '';
@@ -892,7 +863,6 @@
             cancelEditButton.classList.add('hidden');
         });
 
-        // Handle event form submission (create or update)
         eventForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const eventId = eventIdInput.value;
@@ -901,7 +871,6 @@
 
             try {
                 if (eventId) {
-                    // Update existing event
                     const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
                     await setDoc(eventDocRef, {
                         name: eventName,
@@ -909,12 +878,11 @@
                     }, { merge: true });
                     showModal('Éxito', `Evento "${eventName}" actualizado exitosamente.`);
                 } else {
-                    // Create new event
                     const eventsCollectionRef = collection(db, `artifacts/${appId}/public/data/events`);
                     await addDoc(eventsCollectionRef, {
                         name: eventName,
                         date: eventDate,
-                        enrolleeCount: 0, // Initialize enrollee counter
+                        enrolleeCount: 0,
                         ownerId: auth.currentUser.uid,
                         createdAt: new Date()
                     });
@@ -932,7 +900,6 @@
 
         // --- Funcionalidades de Cargar Inscritos y Asistencia ---
 
-        // Function to load events into selectors for upload/attendance views
         function populateEventSelectors(events) {
             eventSelectUpload.innerHTML = '<option value="">Selecciona un evento...</option>';
             eventSelectAttendance.innerHTML = '<option value="">Selecciona un evento...</option>';
@@ -952,7 +919,6 @@
             });
         }
         
-        // 2. Cargar Inscritos
         uploadForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const file = excelFileInput.files[0];
@@ -980,7 +946,6 @@
                     return;
                 }
                 const header = json[0];
-                // Update required headers to include "Id"
                 const requiredHeaders = ['Rut', 'Id', 'Nombre', 'Apellido Paterno', 'Apellido Materno', 'Email'];
                 if (!requiredHeaders.every(h => header.includes(h))) {
                     showModal('Error', `El archivo de Excel debe contener las siguientes columnas: ${requiredHeaders.join(', ')}.`);
@@ -993,7 +958,7 @@
                         enrollee[h.replace(/\s/g, '')] = row[i];
                     });
                     return enrollee;
-                }).filter(enrollee => enrollee.Rut); // Filter out rows without a Rut
+                }).filter(enrollee => enrollee.Rut);
                 
                 if (parsedExcelData.length === 0) {
                      showModal('Error', 'No se encontraron inscritos válidos con RUT en el archivo.');
@@ -1006,7 +971,6 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // Update this function to not display the "Id" column
         function displayEnrolleesTable(data) {
             enrolleesTableBody.innerHTML = '';
             data.forEach(enrollee => {
@@ -1030,12 +994,10 @@
             }
 
             try {
-                // Use a batch to perform multiple writes efficiently
                 const batch = writeBatch(db);
                 const enrolleesCollectionRef = collection(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`);
 
                 parsedExcelData.forEach(enrollee => {
-                    // Use the Rut as the document ID
                     const enrolleeDocRef = doc(enrolleesCollectionRef, enrollee.Rut.toString());
                     batch.set(enrolleeDocRef, {
                         ...enrollee,
@@ -1046,7 +1008,6 @@
                 
                 await batch.commit();
 
-                // Update the enrollee count on the parent event document
                 const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
                 await setDoc(eventDocRef, { enrolleeCount: parsedExcelData.length }, { merge: true });
                 
@@ -1060,40 +1021,34 @@
             }
         });
 
-
-        // 3. Tomar Asistencia
         eventSelectAttendance.addEventListener('change', (e) => {
             const eventId = e.target.value;
             if (eventId) {
                 loadAttendanceList(eventId);
-                attendanceSection.classList.remove('hidden'); // Show the attendance section
+                attendanceSection.classList.remove('hidden');
                 exportAttendedButton.disabled = false;
                 exportNotAttendedButton.disabled = false;
-                addEnrolleeButton.disabled = false; // Enable add enrollee button
+                addEnrolleeButton.disabled = false;
             } else {
-                attendanceSection.classList.add('hidden'); // Hide the attendance section
+                attendanceSection.classList.add('hidden');
                 allEnrollees = [];
-                // Reset counters
                 totalEnrolleesCount.textContent = '0';
                 attendedCount.textContent = '0';
                 notAttendedCount.textContent = '0';
                 exportAttendedButton.disabled = true;
                 exportNotAttendedButton.disabled = true;
-                addEnrolleeButton.disabled = true; // Disable add enrollee button
+                addEnrolleeButton.disabled = true;
             }
             searchInputAttendance.value = '';
-            // Stop scanner if event changes
             if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
                 stopQrCodeScanner();
             }
         });
 
-        // Event listener for the search input
         searchInputAttendance.addEventListener('keyup', (e) => {
             filterAndDisplayAttendance(e.target.value);
         });
 
-        // Function to load attendance list from Firestore
         function loadAttendanceList(eventId) {
             const enrolleesCollectionRef = collection(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`);
             onSnapshot(enrolleesCollectionRef, (querySnapshot) => {
@@ -1101,14 +1056,11 @@
                 querySnapshot.forEach((doc) => {
                     allEnrollees.push({ id: doc.id, ...doc.data() });
                 });
-                // Update counters with the new data
                 updateAttendanceCounters();
-                // Display all enrollees initially or based on the current search
                 filterAndDisplayAttendance(searchInputAttendance.value);
             });
         }
         
-        // New function to update the attendance counters
         function updateAttendanceCounters() {
             const total = allEnrollees.length;
             const attended = allEnrollees.filter(enrollee => enrollee.attended).length;
@@ -1119,7 +1071,6 @@
             notAttendedCount.textContent = notAttended;
         }
 
-        // Function to filter enrollees and display the table
         function filterAndDisplayAttendance(searchText) {
             const normalizedSearchText = searchText.toLowerCase().trim();
             let filteredEnrollees = allEnrollees;
@@ -1134,8 +1085,6 @@
             displayAttendanceTable(filteredEnrollees, eventSelectAttendance.value);
         }
 
-
-        // Function to display the attendance table
         function displayAttendanceTable(enrollees, eventId) {
             attendanceTableBody.innerHTML = '';
             enrollees.forEach(enrollee => {
@@ -1167,7 +1116,6 @@
             });
         }
         
-        // Function to export data to an Excel file
         function exportToExcel(data, filename) {
             if (data.length === 0) {
                 showModal('Información', 'No hay datos para exportar.');
@@ -1190,7 +1138,6 @@
             XLSX.writeFile(workbook, filename);
         }
 
-        // Event listener for the "Exportar Asistentes" button
         exportAttendedButton.addEventListener('click', () => {
             const eventId = eventSelectAttendance.value;
             if (!eventId) {
@@ -1202,7 +1149,6 @@
             exportToExcel(attendedEnrollees, `Presentes_${eventName}.xlsx`);
         });
 
-        // Event listener for the "Exportar No Asistentes" button
         exportNotAttendedButton.addEventListener('click', () => {
             const eventId = eventSelectAttendance.value;
             if (!eventId) {
@@ -1214,7 +1160,6 @@
             exportToExcel(notAttendedEnrollees, `Ausentes_${eventName}.xlsx`);
         });
 
-        // --- Add New Enrollee Manually Functionality ---
         addEnrolleeButton.addEventListener('click', () => {
             const eventId = eventSelectAttendance.value;
             if (!eventId) {
@@ -1233,8 +1178,7 @@
             e.preventDefault();
             const eventId = eventSelectAttendance.value;
             const rut = newEnrolleeRut.value.trim();
-            // Id is no longer taken from input, set to empty string
-            const id = ''; 
+            const id = '';
             const nombre = newEnrolleeNombre.value.trim();
             const apellidoPaterno = newEnrolleeApellidoPaterno.value.trim();
             const apellidoMaterno = newEnrolleeApellidoMaterno.value.trim();
@@ -1256,7 +1200,7 @@
 
                 await setDoc(enrolleeDocRef, {
                     Rut: rut,
-                    Id: id, // Id is now an empty string
+                    Id: id,
                     Nombre: nombre,
                     ApellidoPaterno: apellidoPaterno,
                     ApellidoMaterno: apellidoMaterno,
@@ -1265,7 +1209,6 @@
                     createdAt: new Date()
                 });
 
-                // Update enrollee count for the event
                 const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
                 const eventDocSnap = await getDoc(eventDocRef);
                 const currentEnrolleeCount = eventDocSnap.exists() ? (eventDocSnap.data().enrolleeCount || 0) : 0;
@@ -1281,143 +1224,79 @@
         });
 
         // --- QR Scanner Functionality ---
-        async function startQrCodeScanner() {
+        
+        /**
+         * Inicia el escáner QR. Esta función ahora incluye lógica para parsear la URL
+         * de la cédula de identidad chilena y extraer el RUT.
+         */
+        function startQrCodeScanner() {
             const eventId = eventSelectAttendance.value;
             if (!eventId) {
                 showModal('Error', 'Por favor, selecciona un evento para iniciar el escáner QR.');
                 return;
             }
 
-            try {
-                if (!html5QrcodeScanner) {
-                    console.log("Creando nueva instancia de Html5QrcodeScanner...");
-                    html5QrcodeScanner = new Html5QrcodeScanner(
-                        "qr-reader",
-                        { 
-                            fps: 10, 
-                            qrbox: { width: 250, height: 250 },
-                            disableFlip: false 
-                        },
-                        /* verbose= */ true // Set to true for more detailed logs from the library
-                    );
-                } else {
-                    // If already instantiated, clear it before rendering again to avoid conflicts
-                    if (html5QrcodeScanner.isScanning) {
-                        await html5QrcodeScanner.stop(); // Stop any existing scanning
-                    }
-                    html5QrcodeScanner.clear(); // Clear the QR reader element
-                }
+            // Callback que se ejecuta cuando se escanea un QR con éxito
+            const onScanSuccess = (decodedText, decodedResult) => {
+                console.log(`QR escaneado: ${decodedText}`);
+                let rutToProcess = decodedText.trim();
 
-                console.log("Iniciando escáner QR...");
-                startQrScannerButton.classList.add('hidden');
-                stopQrScannerButton.classList.remove('hidden');
-                qrReader.style.display = 'block';
-
-                let startedSuccessfully = false;
-
-                // Attempt 1: Try with 'environment' facing mode first
-                try {
-                    console.log("Intentando renderizar con facingMode: 'environment'...");
-                    await html5QrcodeScanner.render(
-                        { facingMode: "environment" },
-                        (decodedText, decodedResult) => { // onScanSuccess
-                            console.log(`QR escaneado exitosamente (environment mode): ${decodedText}`, decodedResult);
-                            markAttendanceByRut(decodedText);
-                        },
-                        (errorMessage) => { // onScanError
-                            // This callback is called frequently during active scanning, don't log verbosely here.
-                            // console.warn(`Error de escaneo QR (environment mode): ${errorMessage}`);
-                        }
-                    );
-                    console.log("Escáner renderizado con facingMode: 'environment'.");
-                    startedSuccessfully = true;
-                } catch (envError) {
-                    console.warn("Fallo al renderizar con facingMode: 'environment'.", envError);
-                }
-
-                // If 'environment' failed, try with 'user' facing mode
-                if (!startedSuccessfully) {
+                // **INICIO: LÓGICA MEJORADA PARA CÉDULA DE IDENTIDAD**
+                // Revisa si el texto escaneado es una URL del Registro Civil de Chile.
+                if (decodedText.includes("registrocivil.cl")) {
                     try {
-                        console.log("Intentando renderizar con facingMode: 'user'...");
-                        await html5QrcodeScanner.render(
-                            { facingMode: "user" },
-                            (decodedText, decodedResult) => { // onScanSuccess
-                                console.log(`QR escaneado exitosamente (user mode): ${decodedText}`, decodedResult);
-                                markAttendanceByRut(decodedText);
-                            },
-                            (errorMessage) => { // onScanError
-                                // console.warn(`Error de escaneo QR (user mode): ${errorMessage}`);
-                            }
-                        );
-                        console.log("Escáner renderizado con facingMode: 'user'.");
-                        startedSuccessfully = true;
-                    } catch (userError) {
-                        console.warn("Fallo al renderizar con facingMode: 'user'.", userError);
-                    }
-                }
-
-                // If both facing modes failed, try enumerating cameras and use the first ID
-                if (!startedSuccessfully) {
-                    try {
-                        console.log("Intentando enumerar cámaras y renderizar con la primera detectada...");
-                        const cameras = await Html5Qrcode.getCameras();
-                        if (cameras && cameras.length > 0) {
-                            const cameraIdToUse = cameras[0].id;
-                            console.log(`Usando la primera cámara detectada por ID: ${cameras[0].label || cameras[0].id}`);
-                            await html5QrcodeScanner.render(
-                                cameraIdToUse,
-                                (decodedText, decodedResult) => { // onScanSuccess
-                                    console.log(`QR escaneado exitosamente (por ID): ${decodedText}`, decodedResult);
-                                    markAttendanceByRut(decodedText);
-                                },
-                                (errorMessage) => { // onScanError
-                                    // console.warn(`Error de escaneo QR (por ID): ${errorMessage}`);
-                                }
-                            );
-                            console.log("Escáner renderizado con ID de cámara.");
-                            startedSuccessfully = true;
+                        const url = new URL(decodedText);
+                        const params = new URLSearchParams(url.search);
+                        // El parámetro 'a' en la URL del carnet contiene el RUN/RUT.
+                        const run = params.get('a'); 
+                        if (run) {
+                            rutToProcess = run;
+                            console.log(`RUT extraído de la URL: ${rutToProcess}`);
                         } else {
-                            console.warn("No se detectaron cámaras por getCameras() como último recurso.");
+                             console.warn("URL del Registro Civil escaneada, pero no se encontró el parámetro 'a' (RUN).");
+                             showModal('QR No Válido', 'El QR del carnet no contiene un RUN válido.');
+                             return; // No procesar si no se encuentra el RUN
                         }
-                    } catch (enumError) {
-                        console.error("Error al enumerar cámaras como último recurso:", enumError);
+                    } catch (error) {
+                        console.error("No se pudo procesar la URL del QR:", error);
+                        showModal('Error de QR', 'El QR parece ser de un carnet, pero no se pudo leer correctamente.');
+                        return; // No procesar si hay un error
                     }
                 }
+                // **FIN: LÓGICA MEJORADA**
 
-                if (!startedSuccessfully) {
-                    // If we reach here, all attempts to start the scanner have failed
-                    console.error("Fallo definitivo al iniciar el escáner QR con todas las configuraciones.");
-                    showModal('Error de Cámara', `No se pudo iniciar la cámara para escanear QR después de varios intentos. Asegúrate de haber dado permisos y que una cámara esté conectada y no esté en uso. Detalles técnicos en la consola.`);
-                    startQrScannerButton.classList.remove('hidden');
-                    stopQrScannerButton.classList.add('hidden');
-                }
+                // Marca la asistencia con el RUT ya procesado (extraído de la URL o el texto directo)
+                markAttendanceByRut(rutToProcess);
+            };
 
-            } catch (err) {
-                console.error("Error inesperado al intentar iniciar el escáner QR:", err);
-                showModal('Error de Cámara', `Ocurrió un error inesperado al iniciar la cámara. Asegúrate de los permisos. Error: ${err.name} - ${err.message}`);
-                startQrScannerButton.classList.remove('hidden');
-                stopQrScannerButton.classList.add('hidden');
+            const onScanFailure = (error) => {
+                // No hacer nada en caso de fallo, la librería lo maneja.
+                // console.warn(`Error de escaneo QR = ${error}`);
+            };
+
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "qr-reader", 
+                    { fps: 10, qrbox: {width: 250, height: 250}, disableFlip: false },
+                    /* verbose= */ false);
             }
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            startQrScannerButton.classList.add('hidden');
+            stopQrScannerButton.classList.remove('hidden');
         }
 
         function stopQrCodeScanner() {
             if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-                console.log("Deteniendo escáner QR...");
                 html5QrcodeScanner.stop().then(() => {
                     console.log("Escáner QR detenido.");
-                    qrReader.innerHTML = ''; // Limpiar el feed de la cámara
-                    qrReader.style.display = 'block'; 
+                    html5QrcodeScanner.clear(); // Limpia la instancia para poder iniciarla de nuevo
+                    qrReader.innerHTML = '';
                     startQrScannerButton.classList.remove('hidden');
                     stopQrScannerButton.classList.add('hidden');
                 }).catch((err) => {
                     console.error("Error al detener el escáner QR:", err);
-                    showModal('Error', 'Error al detener el escáner QR. Por favor, revisa la consola para más detalles.');
                 });
-            } else {
-                console.log("Escáner QR no está activo para detener.");
-                qrReader.innerHTML = ''; 
-                startQrScannerButton.classList.remove('hidden');
-                stopQrScannerButton.classList.add('hidden');
             }
         }
 
@@ -1428,7 +1307,7 @@
                 return;
             }
 
-            const normalizedRut = rut.trim(); 
+            const normalizedRut = rut.trim();
             const enrolleeDocRef = doc(db, `artifacts/${appId}/public/data/events/${eventId}/enrollees`, normalizedRut);
 
             try {
@@ -1453,7 +1332,6 @@
         startQrScannerButton.addEventListener('click', startQrCodeScanner);
         stopQrScannerButton.addEventListener('click', stopQrCodeScanner);
 
-        // Initial check for a user on page load
         window.onload = () => {
             loadingScreen.classList.remove('hidden');
         };
