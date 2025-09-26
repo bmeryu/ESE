@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merchandising - ESE Business School</title>
+    
+    <!-- Google Fonts - Poppins and Roboto used in the original site -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* General Styles inspired by ese-beneficios.cl */
+        :root {
+            --ese-main-blue: #0073b6; /* The blue from the icons */
+            --ese-dark-blue: #0A2342;
+            --header-top-bg: #222222;
+            --header-main-bg: #ffffff;
+            --header-nav-bg: #333333;
+            --background-light: #f4f4f4;
+            --text-color: #333;
+            --card-border: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            background-color: var(--background-light);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header Styles */
+        .top-bar {
+            background-color: var(--header-top-bg);
+            padding: 8px 0;
+        }
+
+        .top-bar .container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .search-icon-box {
+            border: 1px solid white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            color: white;
+        }
+        
+        .login-btn {
+            color: white;
+            text-decoration: none;
+            border: 1px solid white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.3s;
+        }
+
+        .login-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .main-header {
+            background-color: var(--header-main-bg);
+            padding: 20px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .main-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+        }
+
+        .logo-text {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #555;
+            line-height: 1;
+        }
+
+        .logo-divider {
+            width: 2px;
+            height: 40px;
+            background-color: var(--ese-main-blue);
+        }
+
+        .logo-shield-img {
+            height: 45px;
+            width: auto;
+        }
+
+        .main-nav-bar {
+            background-color: var(--header-nav-bg);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .main-nav-bar .container {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        .main-nav a {
+            color: white;
+            text-decoration: none;
+            padding: 15px 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+            text-transform: uppercase;
+            transition: color 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .main-nav a:hover {
+            color: var(--ese-main-blue);
+        }
+        
+        .main-nav a.active {
+            color: var(--ese-main-blue);
+            border-bottom-color: var(--ese-main-blue);
+        }
+        
+        /* New Category Section */
+        .category-section {
+            padding: 50px 0;
+        }
+
+        .category-title {
+            text-align: center;
+            font-size: 2.2em;
+            color: var(--ese-dark-blue);
+            margin-bottom: 40px;
+            font-weight: 700;
+        }
+
+        .category-grid {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+
+        .category-box {
+            background-color: var(--ese-main-blue);
+            color: white;
+            width: 160px;
+            height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s, background-color 0.3s;
+            border: 3px solid var(--ese-main-blue);
+        }
+
+        .category-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 115, 182, 0.2);
+        }
+
+        .category-box.active {
+            background-color: #fff;
+            color: var(--ese-main-blue);
+        }
+        
+        .category-box i {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .category-box span {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            font-size: 1em;
+            text-transform: uppercase;
+        }
+
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+            padding: 40px 0;
+        }
+
+        .product-card {
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid var(--card-border);
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background-color: #eee;
+        }
+
+        .product-card-content {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card h3 {
+            margin: 0 0 10px 0;
+            color: var(--ese-dark-blue);
+            font-size: 1.4em;
+        }
+        
+        .product-card p {
+            margin: 0 0 20px 0;
+            font-size: 0.95em;
+            flex-grow: 1;
+        }
+
+        .contact-btn {
+            display: inline-block;
+            background-color: var(--ese-gold);
+            color: var(--ese-dark-blue);
+            padding: 12px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            text-align: center;
+            transition: background-color 0.3s, transform 0.2s;
+            font-family: 'Poppins', sans-serif;
+            border: none;
+        }
+
+        .contact-btn:hover {
+            background-color: #c5910f;
+            transform: scale(1.05);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            animation: fadeInBg 0.4s;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 30px 40px;
+            border: none;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            animation: fadeInModal 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes fadeInBg { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInModal { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .close-button {
+            color: #aaa;
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: #333;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .modal-content h2 {
+            color: var(--ese-dark-blue);
+            margin-top: 0;
+        }
+
+        .modal-content p, .modal-content li {
+            font-family: 'Roboto', sans-serif;
+            color: #555;
+            font-size: 1.05em;
+        }
+
+        .modal-content ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .modal-content li {
+            margin-bottom: 10px;
+        }
+        
+        /* Footer Styles */
+        .main-footer {
+            background-color: var(--ese-dark-blue);
+            color: white;
+            padding: 40px 0;
+            margin-top: 60px;
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .footer-section {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .footer-section h4 {
+            color: var(--ese-gold);
+            margin-bottom: 15px;
+        }
+        
+        .footer-section a, .footer-section p {
+            color: #ccc;
+            text-decoration: none;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .footer-section a:hover {
+            color: white;
+        }
+
+        .social-icons a {
+            display: inline-block;
+            margin-right: 15px;
+            font-size: 1.5em;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-header .container {
+                flex-direction: column;
+                gap: 20px;
+            }
+            .main-nav-bar .container {
+                justify-content: center;
+            }
+            .main-nav a {
+                padding: 15px 10px;
+                font-size: 0.8em;
+            }
+            .category-box {
+                width: 130px;
+                height: 120px;
+            }
+            .category-box i {
+                font-size: 2.5em;
+            }
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header similar to the one in ese-beneficios.cl -->
+    <div class="top-bar">
+        <div class="container">
+            <a href="#" class="search-icon" aria-label="Buscar">
+                <div class="search-icon-box">
+                    <i class="fas fa-search"></i>
+                </div>
+            </a>
+            <a href="#" class="login-btn">
+                <i class="fas fa-user"></i>&nbsp;Ingresa aquí
+            </a>
+        </div>
+    </div>
+    <header class="main-header">
+        <div class="container">
+            <a href="#" class="logo-container">
+                <span class="logo-text">MERCHANDISING</span>
+                <div class="logo-divider"></div>
+                <div class="logo-shield">
+                     <img src="https://www.uandes.cl/wp-content/uploads/2021/05/logo-ese-azul.png" alt="ESE Business School Logo" class="logo-shield-img">
+                </div>
+            </a>
+        </div>
+    </header>
+    <nav class="main-nav-bar">
+        <div class="container">
+             <div class="main-nav">
+                <a href="#">Inicio</a>
+                <a href="https://ese-beneficios.cl/">Beneficios</a>
+                <a href="#" class="active">Merchandising</a>
+                <a href="#">Formación Continua</a>
+                <a href="#">Contacto</a>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="category-section">
+            <div class="container">
+                 <h1 class="category-title">Lleva el Sello ESE</h1>
+                <div class="category-grid">
+                    <div class="category-box active" data-category="all">
+                        <i class="fas fa-th-large"></i>
+                        <span>Todos</span>
+                    </div>
+                    <div class="category-box" data-category="vestuario">
+                        <i class="fas fa-tshirt"></i>
+                        <span>Vestuario</span>
+                    </div>
+                    <div class="category-box" data-category="oficina">
+                        <i class="fas fa-briefcase"></i>
+                        <span>Oficina</span>
+                    </div>
+                    <div class="category-box" data-category="accesorios">
+                        <i class="fas fa-gift"></i>
+                        <span>Accesorios</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Product Grid -->
+        <div class="container">
+            <div class="product-grid">
+                <!-- Product Card 1 -->
+                <div class="product-card" data-category="vestuario">
+                    <img src="https://placehold.co/600x400/0A2342/FFFFFF?text=Polerón+ESE" alt="Polerón con capucha ESE">
+                    <div class="product-card-content">
+                        <h3>Polerón con Capucha</h3>
+                        <p>Polerón de algodón de alta calidad con el logo de ESE bordado. Perfecto para los días fríos y para mostrar tu orgullo por la escuela.</p>
+                        <button class="contact-btn" data-product-name="Polerón con Capucha">Consultar</button>
+                    </div>
+                </div>
+
+                <!-- Product Card 2 -->
+                <div class="product-card" data-category="oficina">
+                    <img src="https://placehold.co/600x400/D4A017/0A2342?text=Tazón+ESE" alt="Tazón de cerámica ESE">
+                    <div class="product-card-content">
+                        <h3>Tazón de Cerámica</h3>
+                        <p>Tazón de cerámica con diseño minimalista y el logo de ESE. Ideal para tu café de la mañana en la oficina o en casa.</p>
+                        <button class="contact-btn" data-product-name="Tazón de Cerámica">Consultar</button>
+                    </div>
+                </div>
+
+                <!-- Product Card 3 -->
+                <div class="product-card" data-category="accesorios">
+                    <img src="https://placehold.co/600x400/f8f9fa/333333?text=Gorro+ESE" alt="Gorro Jockey ESE">
+                    <div class="product-card-content">
+                        <h3>Gorro Jockey</h3>
+                        <p>Gorro estilo jockey con ajuste regulable y logo ESE. Un accesorio versátil para actividades al aire libre y el día a día.</p>
+                        <button class="contact-btn" data-product-name="Gorro Jockey">Consultar</button>
+                    </div>
+                </div>
+
+                <!-- Product Card 4 -->
+                <div class="product-card" data-category="oficina">
+                    <img src="https://placehold.co/600x400/FFFFFF/0A2342?text=Cuaderno+ESE" alt="Cuaderno Corporativo ESE">
+                    <div class="product-card-content">
+                        <h3>Cuaderno Corporativo</h3>
+                        <p>Cuaderno de tapa dura con hojas punteadas, ideal para tomar notas en clases o reuniones. Incluye el logo de ESE en bajo relieve.</p>
+                        <button class="contact-btn" data-product-name="Cuaderno Corporativo">Consultar</button>
+                    </div>
+                </div>
+
+                <!-- Product Card 5 -->
+                <div class="product-card" data-category="accesorios">
+                    <img src="https://placehold.co/600x400/0A2342/FFFFFF?text=Mochila+ESE" alt="Mochila ESE">
+                    <div class="product-card-content">
+                        <h3>Mochila Ejecutiva</h3>
+                        <p>Mochila resistente al agua con compartimento para laptop y múltiples bolsillos. Diseñada para profesionales y estudiantes.</p>
+                        <button class="contact-btn" data-product-name="Mochila Ejecutiva">Consultar</button>
+                    </div>
+                </div>
+
+                <!-- Product Card 6 -->
+                <div class="product-card" data-category="vestuario">
+                    <img src="https://placehold.co/600x400/D4A017/0A2342?text=Polera+Polo" alt="Polera Polo ESE">
+                    <div class="product-card-content">
+                        <h3>Polera Polo</h3>
+                        <p>Polera tipo polo de piqué, con cuello y logo bordado. Un clásico elegante para representar a ESE en cualquier ocasión.</p>
+                        <button class="contact-btn" data-product-name="Polera Polo">Consultar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Contact Info -->
+    <div id="contactModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2 id="modalProductName">Consulta por Producto</h2>
+            <p>Para consultar sobre disponibilidad, tallas o realizar un pedido, por favor contacta a Alumni ESE:</p>
+            <ul>
+                <li><strong><i class="fas fa-envelope"></i> Correo:</strong> alumni@ese.cl</li>
+                <li><strong><i class="fas fa-phone"></i> Teléfono:</strong> +56 2 2618 1800</li>
+            </ul>
+            <p>Recuerda mencionar el producto de tu interés al contactarnos.</p>
+        </div>
+    </div>
+
+
+    <!-- Footer similar to the one in ese-beneficios.cl -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>ESE Business School</h4>
+                    <p>Av. Plaza 1905, San Carlos de Apoquindo, Las Condes, Santiago de Chile</p>
+                    <p>+56 2 2618 1800</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Navegación</h4>
+                    <a href="#">Beneficios</a>
+                    <a href="#">Merchandising</a>
+                    <a href="#">Contacto Alumni</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Síguenos</h4>
+                    <div class="social-icons">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Simple filter logic
+        document.addEventListener('DOMContentLoaded', function () {
+            const filterButtons = document.querySelectorAll('.category-box');
+            const productCards = document.querySelectorAll('.product-card');
+
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    // Manage active state for buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const category = this.getAttribute('data-category');
+
+                    // Filter cards
+                    productCards.forEach(card => {
+                        if (category === 'all' || card.getAttribute('data-category') === category) {
+                            card.style.display = 'flex';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+
+            // Modal logic
+            const modal = document.getElementById('contactModal');
+            const modalProductName = document.getElementById('modalProductName');
+            const closeBtn = document.querySelector('.close-button');
+            const contactButtons = document.querySelectorAll('.contact-btn');
+
+            contactButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const productName = this.getAttribute('data-product-name');
+                    modalProductName.textContent = `Consulta por: ${productName}`;
+                    modal.style.display = 'block';
+                });
+            });
+
+            // Function to close the modal
+            const closeModal = () => {
+                modal.style.display = 'none';
+            }
+
+            // Event listeners for closing the modal
+            closeBtn.addEventListener('click', closeModal);
+            window.addEventListener('click', function(event) {
+                if (event.target == modal) {
+                    closeModal();
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
+
