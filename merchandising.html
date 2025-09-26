@@ -18,6 +18,7 @@
         :root {
             --ese-main-blue: #0073b6; /* The blue from the icons */
             --ese-dark-blue: #0A2342;
+            --ese-gold: #D4A017;
             --header-top-bg: #222222;
             --header-main-bg: #ffffff;
             --header-nav-bg: #333333;
@@ -63,6 +64,7 @@
             padding: 5px 8px;
             border-radius: 4px;
             color: white;
+            cursor: pointer;
         }
         
         .login-btn {
@@ -153,7 +155,7 @@
         
         /* New Category Section */
         .category-section {
-            padding: 50px 0;
+            padding: 50px 0 30px;
         }
 
         .category-title {
@@ -208,12 +210,73 @@
             text-transform: uppercase;
         }
 
+        /* Filter and Search Bar Styles */
+        .filter-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 20px;
+            border-top: 1px solid #ddd;
+            margin-top: 40px;
+        }
+
+        .search-container {
+            position: relative;
+            flex-grow: 1;
+            min-width: 250px;
+        }
+
+        .search-bar-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 12px 20px 12px 45px;
+            border: 1px solid #ddd;
+            border-radius: 50px;
+            font-size: 1em;
+            font-family: 'Roboto', sans-serif;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            box-sizing: border-box;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: var(--ese-main-blue);
+            box-shadow: 0 0 0 3px rgba(0, 115, 182, 0.2);
+        }
+
+        .sort-container select {
+            padding: 12px 40px 12px 20px;
+            border: 1px solid #ddd;
+            border-radius: 50px;
+            font-size: 1em;
+            font-family: 'Roboto', sans-serif;
+            background-color: white;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23999%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.4-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px top 50%;
+            background-size: .65em auto;
+        }
+
         /* Product Grid */
         .product-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 30px;
-            padding: 40px 0;
+            padding: 20px 0;
         }
 
         .product-card {
@@ -257,6 +320,23 @@
             font-size: 0.95em;
             flex-grow: 1;
         }
+        
+        .product-price {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .product-price span {
+            font-size: 0.9em;
+            color: #777;
+            display: block;
+        }
+
+        .product-price strong {
+            font-size: 1.5em;
+            color: var(--ese-main-blue);
+            font-weight: 700;
+        }
 
         .contact-btn {
             display: inline-block;
@@ -267,14 +347,17 @@
             text-decoration: none;
             font-weight: 600;
             text-align: center;
-            transition: background-color 0.3s, transform 0.2s;
+            transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
             font-family: 'Poppins', sans-serif;
             border: none;
+            cursor: pointer;
+            margin-top: auto;
         }
 
         .contact-btn:hover {
             background-color: #c5910f;
             transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(212, 160, 23, 0.4);
         }
         
         /* Modal Styles */
@@ -405,6 +488,10 @@
             .category-box i {
                 font-size: 2.5em;
             }
+            .filter-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
             .footer-content {
                 flex-direction: column;
                 text-align: center;
@@ -417,10 +504,8 @@
     <!-- Header similar to the one in ese-beneficios.cl -->
     <div class="top-bar">
         <div class="container">
-            <a href="#" class="search-icon" aria-label="Buscar">
-                <div class="search-icon-box">
-                    <i class="fas fa-search"></i>
-                </div>
+            <a class="search-icon-box" aria-label="Buscar">
+                <i class="fas fa-search"></i>
             </a>
             <a href="#" class="login-btn">
                 <i class="fas fa-user"></i>&nbsp;Ingresa aquí
@@ -471,9 +556,30 @@
                         <i class="fas fa-gift"></i>
                         <span>Accesorios</span>
                     </div>
+                    <div class="category-box" data-category="kits">
+                        <i class="fas fa-box-open"></i>
+                        <span>Kits</span>
+                    </div>
                 </div>
             </div>
         </section>
+        
+        <div class="container">
+             <!-- Filter and Search Bar -->
+            <div class="filter-bar">
+                <div class="search-container">
+                    <i class="fas fa-search search-bar-icon"></i>
+                    <input type="text" id="searchInput" placeholder="Buscar por nombre...">
+                </div>
+                <div class="sort-container">
+                    <select id="sortSelect">
+                        <option value="default">Ordenar por</option>
+                        <option value="price-asc">Precio: Menor a Mayor</option>
+                        <option value="price-desc">Precio: Mayor a Menor</option>
+                    </select>
+                </div>
+            </div>
+        </div>
 
         <!-- Product Grid -->
         <div class="container">
@@ -483,8 +589,12 @@
                     <img src="https://placehold.co/600x400/0A2342/FFFFFF?text=Polerón+ESE" alt="Polerón con capucha ESE">
                     <div class="product-card-content">
                         <h3>Polerón con Capucha</h3>
-                        <p>Polerón de algodón de alta calidad con el logo de ESE bordado. Perfecto para los días fríos y para mostrar tu orgullo por la escuela.</p>
-                        <button class="contact-btn" data-product-name="Polerón con Capucha">Consultar</button>
+                        <p>Polerón de algodón de alta calidad con el logo de ESE bordado. Perfecto para los días fríos y para conectar con tu alma mater.</p>
+                        <div class="product-price">
+                            <span>Precio Referencial</span>
+                            <strong>$29.990</strong>
+                        </div>
+                        <button class="contact-btn" data-product-name="Polerón con Capucha">Me Interesa</button>
                     </div>
                 </div>
 
@@ -494,7 +604,11 @@
                     <div class="product-card-content">
                         <h3>Tazón de Cerámica</h3>
                         <p>Tazón de cerámica con diseño minimalista y el logo de ESE. Ideal para tu café de la mañana en la oficina o en casa.</p>
-                        <button class="contact-btn" data-product-name="Tazón de Cerámica">Consultar</button>
+                         <div class="product-price">
+                            <span>Precio Referencial</span>
+                            <strong>$8.990</strong>
+                        </div>
+                        <button class="contact-btn" data-product-name="Tazón de Cerámica">Me Interesa</button>
                     </div>
                 </div>
 
@@ -504,7 +618,11 @@
                     <div class="product-card-content">
                         <h3>Gorro Jockey</h3>
                         <p>Gorro estilo jockey con ajuste regulable y logo ESE. Un accesorio versátil para actividades al aire libre y el día a día.</p>
-                        <button class="contact-btn" data-product-name="Gorro Jockey">Consultar</button>
+                         <div class="product-price">
+                            <span>Precio Referencial</span>
+                            <strong>$12.990</strong>
+                        </div>
+                        <button class="contact-btn" data-product-name="Gorro Jockey">Me Interesa</button>
                     </div>
                 </div>
 
@@ -514,7 +632,11 @@
                     <div class="product-card-content">
                         <h3>Cuaderno Corporativo</h3>
                         <p>Cuaderno de tapa dura con hojas punteadas, ideal para tomar notas en clases o reuniones. Incluye el logo de ESE en bajo relieve.</p>
-                        <button class="contact-btn" data-product-name="Cuaderno Corporativo">Consultar</button>
+                         <div class="product-price">
+                            <span>Precio Referencial</span>
+                            <strong>$9.990</strong>
+                        </div>
+                        <button class="contact-btn" data-product-name="Cuaderno Corporativo">Me Interesa</button>
                     </div>
                 </div>
 
@@ -524,7 +646,11 @@
                     <div class="product-card-content">
                         <h3>Mochila Ejecutiva</h3>
                         <p>Mochila resistente al agua con compartimento para laptop y múltiples bolsillos. Diseñada para profesionales y estudiantes.</p>
-                        <button class="contact-btn" data-product-name="Mochila Ejecutiva">Consultar</button>
+                         <div class="product-price">
+                            <span>Precio Referencial</span>
+                            <strong>$34.990</strong>
+                        </div>
+                        <button class="contact-btn" data-product-name="Mochila Ejecutiva">Me Interesa</button>
                     </div>
                 </div>
 
@@ -534,9 +660,42 @@
                     <div class="product-card-content">
                         <h3>Polera Polo</h3>
                         <p>Polera tipo polo de piqué, con cuello y logo bordado. Un clásico elegante para representar a ESE en cualquier ocasión.</p>
-                        <button class="contact-btn" data-product-name="Polera Polo">Consultar</button>
+                         <div class="product-price">
+                            <span>Precio Referencial</span>
+                            <strong>$24.990</strong>
+                        </div>
+                        <button class="contact-btn" data-product-name="Polera Polo">Me Interesa</button>
                     </div>
                 </div>
+                
+                <!-- Kit 1 -->
+                <div class="product-card" data-category="kits">
+                    <img src="https://placehold.co/600x400/0073b6/FFFFFF?text=Kit+Bienvenida" alt="Kit Bienvenida ESE">
+                    <div class="product-card-content">
+                        <h3>Kit Bienvenida ESE</h3>
+                        <p>El pack perfecto para empezar con todo. Incluye Tazón de Cerámica y Cuaderno Corporativo. Ideal para nuevos alumnos.</p>
+                        <div class="product-price">
+                            <span>Precio Referencial</span>
+                            <strong>$16.990</strong>
+                        </div>
+                        <button class="contact-btn" data-product-name="Kit Bienvenida ESE">Me Interesa</button>
+                    </div>
+                </div>
+
+                <!-- Kit 2 -->
+                <div class="product-card" data-category="kits">
+                    <img src="https://placehold.co/600x400/0A2342/D4A017?text=Kit+Ejecutivo" alt="Kit Ejecutivo ESE">
+                    <div class="product-card-content">
+                        <h3>Kit Ejecutivo</h3>
+                        <p>Lleva el sello ESE a todas partes con estilo. Este kit incluye la Mochila Ejecutiva y la elegante Polera Polo.</p>
+                        <div class="product-price">
+                            <span>Precio Referencial</span>
+                            <strong>$54.990</strong>
+                        </div>
+                        <button class="contact-btn" data-product-name="Kit Ejecutivo">Me Interesa</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </main>
@@ -585,31 +744,83 @@
     </footer>
 
     <script>
-        // Simple filter logic
         document.addEventListener('DOMContentLoaded', function () {
+            // --- Elements ---
             const filterButtons = document.querySelectorAll('.category-box');
             const productCards = document.querySelectorAll('.product-card');
+            const searchInput = document.getElementById('searchInput');
+            const sortSelect = document.getElementById('sortSelect');
+            const productGrid = document.querySelector('.product-grid');
+            const topSearchIcon = document.querySelector('.top-bar .search-icon-box');
 
-            filterButtons.forEach(button => {
-                button.addEventListener('click', function () {
-                    // Manage active state for buttons
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
-                    this.classList.add('active');
+            // --- Main function to update product visibility and order ---
+            function updateProductDisplay() {
+                const selectedCategory = document.querySelector('.category-box.active').getAttribute('data-category');
+                const searchTerm = searchInput.value.toLowerCase();
+                const sortValue = sortSelect.value;
 
-                    const category = this.getAttribute('data-category');
+                let visibleCards = [];
 
-                    // Filter cards
-                    productCards.forEach(card => {
-                        if (category === 'all' || card.getAttribute('data-category') === category) {
-                            card.style.display = 'flex';
-                        } else {
-                            card.style.display = 'none';
+                // 1. Filter by category and search term
+                productCards.forEach(card => {
+                    const cardCategory = card.getAttribute('data-category');
+                    const cardTitle = card.querySelector('h3').textContent.toLowerCase();
+                    const cardDescription = card.querySelector('p').textContent.toLowerCase();
+
+                    const categoryMatch = (selectedCategory === 'all' || cardCategory === selectedCategory);
+                    const searchMatch = (cardTitle.includes(searchTerm) || cardDescription.includes(searchTerm));
+
+                    if (categoryMatch && searchMatch) {
+                        card.style.display = 'flex';
+                        visibleCards.push(card);
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+
+                // 2. Sort the visible cards
+                if (sortValue !== 'default') {
+                    visibleCards.sort((a, b) => {
+                        const priceA = parseFloat(a.querySelector('.product-price strong').textContent.replace('$', '').replace(/\./g, ''));
+                        const priceB = parseFloat(b.querySelector('.product-price strong').textContent.replace('$', '').replace(/\./g, ''));
+
+                        if (sortValue === 'price-asc') {
+                            return priceA - priceB;
+                        } else { // price-desc
+                            return priceB - priceA;
                         }
                     });
+                }
+                
+                // 3. Re-append sorted cards to the grid to apply order
+                visibleCards.forEach(card => productGrid.appendChild(card));
+            }
+
+
+            // --- Event Listeners ---
+
+            // Category filter buttons
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    updateProductDisplay();
                 });
             });
 
-            // Modal logic
+            // Search input
+            searchInput.addEventListener('input', updateProductDisplay);
+
+            // Sort select
+            sortSelect.addEventListener('change', updateProductDisplay);
+
+            // Focus on search bar when top icon is clicked
+            topSearchIcon.addEventListener('click', (e) => {
+                e.preventDefault();
+                searchInput.focus();
+            });
+
+            // --- Modal logic ---
             const modal = document.getElementById('contactModal');
             const modalProductName = document.getElementById('modalProductName');
             const closeBtn = document.querySelector('.close-button');
@@ -623,12 +834,10 @@
                 });
             });
 
-            // Function to close the modal
             const closeModal = () => {
                 modal.style.display = 'none';
             }
 
-            // Event listeners for closing the modal
             closeBtn.addEventListener('click', closeModal);
             window.addEventListener('click', function(event) {
                 if (event.target == modal) {
